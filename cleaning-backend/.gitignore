@@ -6,3 +6,5 @@ node_modules/
 dist/
 coverage/
 
+.claude
+generate64bit_code.md

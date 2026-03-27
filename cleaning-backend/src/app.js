@@ -69,9 +69,11 @@ const apiLimiter = rateLimit({
   message: { success: false, error: 'Too many requests, please slow down.' },
 });
 
-app.use('/api/', apiLimiter);
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', registerLimiter);
+if (process.env.NODE_ENV !== 'test') {
+  app.use('/api/', apiLimiter);
+  app.use('/api/auth/login', authLimiter);
+  app.use('/api/auth/register', registerLimiter);
+}
 
 // Health check
 app.get('/api/health', (req, res) => {
