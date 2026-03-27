@@ -91,11 +91,11 @@ async function seed() {
   const passwordHash = await bcrypt.hash(seedPassword, 12);
 
   const usersData = [
-    { firstName: 'Alex',    lastName: 'Brillo',   email: 'owner@brillocleaning.com',   role: 'owner',   phone: '+13055550100', preferredLanguage: 'en' },
-    { firstName: 'Laura',   lastName: 'Vega',     email: 'manager@brillocleaning.com', role: 'manager', phone: '+13055550101', preferredLanguage: 'en' },
-    { firstName: 'Carlos',  lastName: 'Ruiz',     email: 'carlos@brillocleaning.com',  role: 'cleaner', phone: '+13055550102', preferredLanguage: 'es' },
-    { firstName: 'Ana',     lastName: 'Morales',  email: 'ana@brillocleaning.com',     role: 'cleaner', phone: '+13055550103', preferredLanguage: 'es' },
-    { firstName: 'Michael', lastName: 'Thompson', email: 'mike@brillocleaning.com',    role: 'cleaner', phone: '+13055550104', preferredLanguage: 'en' },
+    { firstName: 'Alex',    lastName: 'Brillo',   email: 'owner@brillocleaning.com',   role: 'owner',   phone: '+13055550100', preferredLanguage: 'en', username: 'alex.brillo' },
+    { firstName: 'Laura',   lastName: 'Vega',     email: 'manager@brillocleaning.com', role: 'manager', phone: '+13055550101', preferredLanguage: 'en', username: 'laura.vega' },
+    { firstName: 'Carlos',  lastName: 'Ruiz',     email: 'carlos@brillocleaning.com',  role: 'cleaner', phone: '+13055550102', preferredLanguage: 'es', username: 'carlos.ruiz' },
+    { firstName: 'Ana',     lastName: 'Morales',  email: 'ana@brillocleaning.com',     role: 'cleaner', phone: '+13055550103', preferredLanguage: 'es', username: 'ana.morales' },
+    { firstName: 'Michael', lastName: 'Thompson', email: 'mike@brillocleaning.com',    role: 'cleaner', phone: '+13055550104', preferredLanguage: 'en', username: 'michael.thompson' },
   ];
 
   const users = await User.insertMany(
