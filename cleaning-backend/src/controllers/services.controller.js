@@ -3,12 +3,21 @@ const Service = require('../models/Service');
 // GET /api/services
 const listServices = async (req, res, next) => {
   try {
+    const MAX_LIMIT = 100;
+    const page  = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(req.query.limit) || 20));
+    const skip  = (page - 1) * limit;
+
     const { isActive } = req.query;
     const filter = { tenantId: req.user.tenantId };
     if (isActive !== undefined) filter.isActive = isActive === 'true';
 
-    const services = await Service.find(filter).sort({ createdAt: -1 });
-    res.json({ success: true, data: services });
+    const [services, total] = await Promise.all([
+      Service.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Service.countDocuments(filter),
+    ]);
+
+    res.json({ success: true, data: services, pagination: { total, page, limit } });
   } catch (err) {
     next(err);
   }
