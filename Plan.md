@@ -1,4 +1,7 @@
 🧼 Cleaning Business SaaS Platform
+
+## Frontend repo> https://github.com/ervinbani/cleanapp-frontend
+
 Multi-Tenant | Multi-Language | AI-Powered
 📄 Project Proposal
 Prepared by:
@@ -193,10 +196,10 @@ automations
 Example Schema:
 
 {
-  tenantId: ObjectId,
-  name: "Customer Name",
-  phone: "+1...",
-  preferredLanguage: "en"
+tenantId: ObjectId,
+name: "Customer Name",
+phone: "+1...",
+preferredLanguage: "en"
 }
 🔐 Multi-Tenant Strategy
 Shared database
