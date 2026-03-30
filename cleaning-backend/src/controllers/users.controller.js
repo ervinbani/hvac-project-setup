@@ -158,4 +158,22 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
-module.exports = { listUsers, createUser, updateUser, deleteUser };
+// GET /api/users/:id
+const getUser = async (req, res, next) => {
+  try {
+    const user = await User.findOne({
+      _id: req.params.id,
+      tenantId: req.user.tenantId,
+    }).select('-passwordHash');
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    res.json({ success: true, data: user });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { listUsers, getUser, createUser, updateUser, deleteUser };
