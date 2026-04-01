@@ -9,11 +9,14 @@ const {
 const auth = require('../middleware/auth');
 const requireRole = require('../middleware/requireRole');
 
+const ADMIN       = ['owner', 'director', 'manager_operations', 'manager_hr'];
+const ADMIN_STAFF = [...ADMIN, 'staff'];
+
 router.use(auth);
 
 router.get('/', listRecurringRules);
-router.post('/', requireRole('owner', 'manager', 'staff'), createRecurringRule);
-router.put('/:id', requireRole('owner', 'manager', 'staff'), updateRecurringRule);
-router.delete('/:id', requireRole('owner', 'manager'), deleteRecurringRule);
+router.post('/', requireRole(...ADMIN_STAFF), createRecurringRule);
+router.put('/:id', requireRole(...ADMIN_STAFF), updateRecurringRule);
+router.delete('/:id', requireRole(...ADMIN), deleteRecurringRule);
 
 module.exports = router;

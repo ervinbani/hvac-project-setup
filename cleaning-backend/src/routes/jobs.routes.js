@@ -11,13 +11,17 @@ const {
 const auth = require('../middleware/auth');
 const requireRole = require('../middleware/requireRole');
 
+const ADMIN       = ['owner', 'director', 'manager_operations', 'manager_hr'];
+const ADMIN_STAFF = [...ADMIN, 'staff'];
+const ALL_ROLES   = [...ADMIN_STAFF, 'worker'];
+
 router.use(auth);
 
 router.get('/', listJobs);
 router.get('/:id', getJob);
-router.post('/', requireRole('owner', 'manager', 'staff'), createJob);
-router.put('/:id', requireRole('owner', 'manager', 'staff'), updateJob);
-router.patch('/:id/status', requireRole('owner', 'manager', 'staff', 'cleaner'), updateJobStatus);
-router.delete('/:id', requireRole('owner', 'manager'), deleteJob);
+router.post('/', requireRole(...ADMIN_STAFF), createJob);
+router.put('/:id', requireRole(...ADMIN_STAFF), updateJob);
+router.patch('/:id/status', requireRole(...ALL_ROLES), updateJobStatus);
+router.delete('/:id', requireRole(...ADMIN), deleteJob);
 
 module.exports = router;

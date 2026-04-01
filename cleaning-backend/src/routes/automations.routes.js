@@ -9,11 +9,13 @@ const {
 const auth = require('../middleware/auth');
 const requireRole = require('../middleware/requireRole');
 
+const ADMIN = ['owner', 'director', 'manager_operations', 'manager_hr'];
+
 router.use(auth);
 
 router.get('/', listAutomations);
-router.post('/', requireRole('owner', 'manager'), createAutomation);
-router.put('/:id', requireRole('owner', 'manager'), updateAutomation);
-router.delete('/:id', requireRole('owner', 'manager'), deleteAutomation);
+router.post('/', requireRole(...ADMIN), createAutomation);
+router.put('/:id', requireRole(...ADMIN), updateAutomation);
+router.delete('/:id', requireRole(...ADMIN), deleteAutomation);
 
 module.exports = router;

@@ -9,11 +9,13 @@ const {
 const auth = require('../middleware/auth');
 const requireRole = require('../middleware/requireRole');
 
+const ADMIN = ['owner', 'director', 'manager_operations', 'manager_hr'];
+
 router.use(auth);
 
 router.get('/', listServices);
-router.post('/', requireRole('owner', 'manager'), createService);
-router.put('/:id', requireRole('owner', 'manager'), updateService);
-router.delete('/:id', requireRole('owner', 'manager'), deleteService);
+router.post('/', requireRole(...ADMIN), createService);
+router.put('/:id', requireRole(...ADMIN), updateService);
+router.delete('/:id', requireRole(...ADMIN), deleteService);
 
 module.exports = router;
