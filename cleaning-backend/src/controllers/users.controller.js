@@ -5,6 +5,7 @@ const User = require("../models/User");
 const listUsers = async (req, res, next) => {
   try {
     const VALID_ROLES = ["owner", "manager", "cleaner", "staff"];
+    const ROLE_HIERARCHY = { owner: 4, manager: 3, staff: 2, cleaner: 1 };
     const MAX_LIMIT = 100;
 
     const rawRole =
@@ -17,8 +18,16 @@ const listUsers = async (req, res, next) => {
       Math.max(1, parseInt(req.query.limit) || 50),
     );
 
-    const filter = { tenantId: req.user.tenantId };
-    if (rawRole && VALID_ROLES.includes(rawRole)) filter.role = rawRole;
+    const myRank = ROLE_HIERARCHY[req.user.role];
+    const visibleRoles = Object.entries(ROLE_HIERARCHY)
+      .filter(([, rank]) => rank <= myRank)
+      .map(([role]) => role);
+
+    const filter = { tenantId: req.user.tenantId, role: { $in: visibleRoles } };
+    // Allow further filtering by role only if it's within visible roles
+    if (rawRole && VALID_ROLES.includes(rawRole) && visibleRoles.includes(rawRole)) {
+      filter.role = rawRole;
+    }
     if (rawIsActive !== undefined) filter.isActive = rawIsActive === "true";
 
     const skip = (page - 1) * limit;
@@ -213,6 +222,8 @@ const deleteUser = async (req, res, next) => {
 // GET /api/users/:id
 const getUser = async (req, res, next) => {
   try {
+    const ROLE_HIERARCHY = { owner: 4, manager: 3, staff: 2, cleaner: 1 };
+
     const user = await User.findOne({
       _id: req.params.id,
       tenantId: req.user.tenantId,
@@ -220,6 +231,10 @@ const getUser = async (req, res, next) => {
 
     if (!user) {
       return res.status(404).json({ success: false, error: "User not found" });
+    }
+
+    if (ROLE_HIERARCHY[user.role] > ROLE_HIERARCHY[req.user.role]) {
+      return res.status(403).json({ success: false, error: "Access denied" });
     }
 
     res.json({ success: true, data: user });
