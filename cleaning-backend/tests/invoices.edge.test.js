@@ -35,6 +35,7 @@ describe('POST /api/invoices — server-side total calculation', () => {
       .send({
         customerId: customer._id,
         items: [{ description: 'Clean', quantity: 2, unitPrice: 100, total: 9999 }],
+        taxRate: 7,
         // subtotal/tax/total sent by client should be ignored
         subtotal: 9999,
         tax: 9999,
@@ -42,7 +43,7 @@ describe('POST /api/invoices — server-side total calculation', () => {
       });
     expect(res.status).toBe(201);
     const inv = res.body.data;
-    // 2 × $100 = $200 subtotal; 7% tax = $14; total = $214
+    // 2 × 100 = 200 subtotal; 7% tax = 14; total = 214
     expect(inv.subtotal).toBe(200);
     expect(inv.tax).toBe(14);
     expect(inv.total).toBe(214);
@@ -136,6 +137,7 @@ describe('PUT /api/invoices/:id — update edge cases', () => {
         .set('Authorization', `Bearer ${token}`)
         .send({
           customerId: customer._id,
+          taxRate: 7,
           items: [{ description: 'Old', quantity: 1, unitPrice: 50 }],
         })
     ).body.data;
@@ -145,7 +147,7 @@ describe('PUT /api/invoices/:id — update edge cases', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ items: [{ description: 'New', quantity: 3, unitPrice: 100 }] });
     expect(res.status).toBe(200);
-    // 3 × $100 = $300; 7% = $21; total = $321
+    // 3 × 100 = 300; 7% = 21; total = 321
     expect(res.body.data.subtotal).toBe(300);
     expect(res.body.data.total).toBe(321);
   });
