@@ -18,7 +18,7 @@
 | Endpoint | worker | staff | manager_hr | manager_operations | director | owner |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | **USERS** | | | | | | |
-| GET /api/users | ✗ | ✗ | ✅ | ✅ | ✅ | ✅ |
+| GET /api/users | ✗ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | POST /api/users | ✗ | ✗ | ✅ | ✅ | ✅ | ✅ |
 | PUT /api/users/:id | ✗ | ✗ | ✅ | ✅ | ✅ | ✅ |
 | DELETE /api/users/:id | ✗ | ✗ | ✗ | ✗ | ✗ | ✅ |
