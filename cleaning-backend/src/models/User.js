@@ -14,8 +14,13 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
     role: {
       type: String,
-      enum: ['owner', 'manager', 'cleaner', 'staff'],
+      enum: ['owner', 'director', 'manager_operations', 'manager_hr', 'staff', 'worker'],
       required: true,
+    },
+    roleId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Role',
+      default: null,
     },
     preferredLanguage: { type: String, enum: ['en', 'es'], default: 'en' },
     phone: String,

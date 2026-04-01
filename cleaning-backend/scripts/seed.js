@@ -13,6 +13,8 @@ const bcrypt = require('bcryptjs');
 
 const Tenant = require('../src/models/Tenant');
 const User = require('../src/models/User');
+const Permission = require('../src/models/Permission');
+const Role = require('../src/models/Role');
 const Customer = require('../src/models/Customer');
 const Service = require('../src/models/Service');
 const Job = require('../src/models/Job');
@@ -85,24 +87,116 @@ async function seed() {
   const tid = tenant._id;
   console.log(`   ✅ Tenant: ${tenant.name} (${tid})`);
 
-  // ── 2. Users ───────────────────────────────────────────────────────────────
+  // ── 2. Permissions ─────────────────────────────────────────────────────────
+  console.log('🌱 Seeding permissions...');
+  const permissionsDefs = [
+    { key: 'users.create',       entity: 'users',       action: 'create' },
+    { key: 'users.read',         entity: 'users',       action: 'read'   },
+    { key: 'users.update',       entity: 'users',       action: 'update' },
+    { key: 'users.delete',       entity: 'users',       action: 'delete' },
+    { key: 'jobs.create',        entity: 'jobs',        action: 'create' },
+    { key: 'jobs.read',          entity: 'jobs',        action: 'read'   },
+    { key: 'jobs.update',        entity: 'jobs',        action: 'update' },
+    { key: 'jobs.delete',        entity: 'jobs',        action: 'delete' },
+    { key: 'services.create',    entity: 'services',    action: 'create' },
+    { key: 'services.read',      entity: 'services',    action: 'read'   },
+    { key: 'services.update',    entity: 'services',    action: 'update' },
+    { key: 'services.delete',    entity: 'services',    action: 'delete' },
+    { key: 'invoices.create',    entity: 'invoices',    action: 'create' },
+    { key: 'invoices.read',      entity: 'invoices',    action: 'read'   },
+    { key: 'invoices.update',    entity: 'invoices',    action: 'update' },
+    { key: 'invoices.delete',    entity: 'invoices',    action: 'delete' },
+    { key: 'roles.create',       entity: 'roles',       action: 'create' },
+    { key: 'roles.read',         entity: 'roles',       action: 'read'   },
+    { key: 'roles.update',       entity: 'roles',       action: 'update' },
+    { key: 'roles.delete',       entity: 'roles',       action: 'delete' },
+    { key: 'permissions.read',   entity: 'permissions', action: 'read'   },
+    { key: 'permissions.update', entity: 'permissions', action: 'update' },
+  ];
+
+  await Promise.all(
+    permissionsDefs.map((p) =>
+      Permission.findOneAndUpdate({ key: p.key }, p, { upsert: true, new: true })
+    )
+  );
+  const allPerms = await Permission.find({}).lean();
+  const byKey = {};
+  allPerms.forEach((p) => { byKey[p.key] = p._id; });
+  console.log(`   ✅ ${allPerms.length} permissions upserted`);
+
+  // ── 3. Roles ────────────────────────────────────────────────────────────────
+  console.log('🌱 Seeding roles...');
+  const pids = (keys) => keys.map((k) => byKey[k]).filter(Boolean);
+
+  const roleDefs = [
+    {
+      name: 'Owner',            code: 'owner',              isSystemRole: true,
+      permissions: pids(Object.keys(byKey)),
+    },
+    {
+      name: 'Director',         code: 'director',           isSystemRole: true,
+      permissions: pids([
+        'users.read', 'users.update',
+        'jobs.create', 'jobs.read', 'jobs.update', 'jobs.delete',
+        'services.create', 'services.read', 'services.update',
+        'invoices.read', 'invoices.update',
+        'roles.read', 'permissions.read',
+      ]),
+    },
+    {
+      name: 'Operations Manager', code: 'manager_operations', isSystemRole: true,
+      permissions: pids([
+        'jobs.create', 'jobs.read', 'jobs.update', 'jobs.delete',
+        'services.read', 'users.read', 'invoices.read',
+      ]),
+    },
+    {
+      name: 'HR Manager',       code: 'manager_hr',         isSystemRole: true,
+      permissions: pids(['users.create', 'users.read', 'users.update', 'users.delete']),
+    },
+    {
+      name: 'Staff',            code: 'staff',              isSystemRole: true,
+      permissions: pids(['jobs.read', 'services.read', 'invoices.read']),
+    },
+    {
+      name: 'Worker',           code: 'worker',             isSystemRole: true,
+      permissions: pids(['jobs.read']),
+    },
+  ];
+
+  const rolesMap = {};
+  for (const def of roleDefs) {
+    const role = await Role.findOneAndUpdate(
+      { tenantId: tid, code: def.code },
+      { ...def, tenantId: tid },
+      { upsert: true, new: true }
+    );
+    rolesMap[def.code] = role._id;
+  }
+  console.log(`   ✅ ${Object.keys(rolesMap).length} roles upserted`);
+
+  // ── 4. Users ───────────────────────────────────────────────────────────────
   console.log('🌱 Seeding users...');
   const seedPassword = process.env.SEED_PASSWORD || 'Dev@Brillo2026!';
   const passwordHash = await bcrypt.hash(seedPassword, 12);
 
   const usersData = [
-    { firstName: 'Alex',    lastName: 'Brillo',   email: 'owner@brillocleaning.com',   role: 'owner',   phone: '+13055550100', preferredLanguage: 'en', username: 'alex.brillo' },
-    { firstName: 'Laura',   lastName: 'Vega',     email: 'manager@brillocleaning.com', role: 'manager', phone: '+13055550101', preferredLanguage: 'en', username: 'laura.vega' },
-    { firstName: 'Carlos',  lastName: 'Ruiz',     email: 'carlos@brillocleaning.com',  role: 'cleaner', phone: '+13055550102', preferredLanguage: 'es', username: 'carlos.ruiz' },
-    { firstName: 'Ana',     lastName: 'Morales',  email: 'ana@brillocleaning.com',     role: 'cleaner', phone: '+13055550103', preferredLanguage: 'es', username: 'ana.morales' },
-    { firstName: 'Michael', lastName: 'Thompson', email: 'mike@brillocleaning.com',    role: 'cleaner', phone: '+13055550104', preferredLanguage: 'en', username: 'michael.thompson' },
+    { firstName: 'Alex',     lastName: 'Brillo',   email: 'owner@brillocleaning.com',   role: 'owner',              roleId: rolesMap['owner'],              phone: '+13055550100', preferredLanguage: 'en' },
+    { firstName: 'Laura',    lastName: 'Vega',     email: 'director@brillocleaning.com', role: 'director',           roleId: rolesMap['director'],           phone: '+13055550101', preferredLanguage: 'en' },
+    { firstName: 'Michael',  lastName: 'Thompson', email: 'ops@brillocleaning.com',      role: 'manager_operations', roleId: rolesMap['manager_operations'], phone: '+13055550102', preferredLanguage: 'en' },
+    { firstName: 'Sandra',   lastName: 'Rivera',   email: 'hr@brillocleaning.com',       role: 'manager_hr',         roleId: rolesMap['manager_hr'],         phone: '+13055550103', preferredLanguage: 'en' },
+    { firstName: 'Kevin',    lastName: 'Brooks',   email: 'kevin@brillocleaning.com',    role: 'staff',              roleId: rolesMap['staff'],              phone: '+13055550104', preferredLanguage: 'en' },
+    { firstName: 'Patricia', lastName: 'Gomez',    email: 'patricia@brillocleaning.com', role: 'staff',              roleId: rolesMap['staff'],              phone: '+13055550105', preferredLanguage: 'es' },
+    { firstName: 'Carlos',   lastName: 'Ruiz',     email: 'carlos@brillocleaning.com',   role: 'worker',             roleId: rolesMap['worker'],             phone: '+13055550106', preferredLanguage: 'es' },
+    { firstName: 'Ana',      lastName: 'Morales',  email: 'ana@brillocleaning.com',      role: 'worker',             roleId: rolesMap['worker'],             phone: '+13055550107', preferredLanguage: 'es' },
+    { firstName: 'Diego',    lastName: 'Torres',   email: 'diego@brillocleaning.com',    role: 'worker',             roleId: rolesMap['worker'],             phone: '+13055550108', preferredLanguage: 'es' },
   ];
 
   const users = await User.insertMany(
     usersData.map((u) => ({ ...u, tenantId: tid, passwordHash, isActive: true, lastLoginAt: daysAgo(randInt(0, 5)) }))
   );
   console.log(`   ✅ ${users.length} users created`);
-  const [owner, manager, cleaner1, cleaner2, cleaner3] = users;
+  const [owner, manager, , , , , cleaner1, cleaner2, cleaner3] = users;
 
   // ── 3. Services ───────────────────────────────────────────────────────────
   console.log('🌱 Seeding services...');
@@ -308,6 +402,8 @@ async function seed() {
   console.log('\n✅ Seed complete!');
   console.log('─'.repeat(40));
   console.log(`  Tenant:          ${tenant.name}`);
+  console.log(`  Permissions:     ${allPerms.length}`);
+  console.log(`  Roles:           ${Object.keys(rolesMap).length}`);
   console.log(`  Users:           ${users.length}`);
   console.log(`  Customers:       ${customers.length}`);
   console.log(`  Services:        ${services.length}`);
@@ -318,7 +414,26 @@ async function seed() {
   console.log(`  Automations:     ${automations.length}`);
   console.log('─'.repeat(40));
   console.log('\n🔑 Seeded user emails (use SEED_PASSWORD env var or default dev password):');
-  usersData.forEach((u) => console.log(`  ${u.role.padEnd(10)} → ${u.email}`));
+  usersData.forEach((u) => console.log(`  ${u.role.padEnd(20)} → ${u.email}`));
 }
 
 module.exports = seed;
+
+// Run directly: node scripts/seed.js
+if (require.main === module) {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    console.error('❌ MONGODB_URI not set in .env');
+    process.exit(1);
+  }
+  mongoose
+    .connect(uri)
+    .then(() => seed())
+    .then(() => mongoose.disconnect())
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error('❌ Seed failed:', err);
+      mongoose.disconnect();
+      process.exit(1);
+    });
+}

@@ -228,4 +228,22 @@ const sendInvoice = async (req, res, next) => {
   }
 };
 
-module.exports = { listInvoices, getInvoice, createInvoice, updateInvoice, sendInvoice };
+// DELETE /api/invoices/:id
+const deleteInvoice = async (req, res, next) => {
+  try {
+    const invoice = await Invoice.findOneAndDelete({
+      _id: req.params.id,
+      tenantId: req.user.tenantId,
+    });
+
+    if (!invoice) {
+      return res.status(404).json({ success: false, error: 'Invoice not found' });
+    }
+
+    res.json({ success: true, data: { message: 'Invoice deleted' } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { listInvoices, getInvoice, createInvoice, updateInvoice, sendInvoice, deleteInvoice };

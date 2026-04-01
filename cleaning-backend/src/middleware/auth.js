@@ -15,6 +15,7 @@ const auth = (req, res, next) => {
       id: decoded.userId,
       tenantId: decoded.tenantId,
       role: decoded.role,
+      roleId: decoded.roleId || null,
     };
     next();
   } catch (err) {

@@ -15,6 +15,8 @@ const invoicesRoutes = require("./routes/invoices.routes");
 const messagesRoutes = require("./routes/messages.routes");
 const automationsRoutes = require("./routes/automations.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
+const rolesRoutes = require("./routes/roles.routes");
+const permissionsRoutes = require("./routes/permissions.routes");
 
 const app = express();
 
@@ -100,6 +102,8 @@ app.use("/api/invoices", invoicesRoutes);
 app.use("/api/messages", messagesRoutes);
 app.use("/api/automations", automationsRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/roles", rolesRoutes);
+app.use("/api/permissions", permissionsRoutes);
 
 // LOW-2: Don't reflect the raw URL back
 app.use((req, res) => {

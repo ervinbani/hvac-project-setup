@@ -2,14 +2,121 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Tenant = require('../models/Tenant');
 const User = require('../models/User');
+const Permission = require('../models/Permission');
+const Role = require('../models/Role');
 
 const generateToken = (user) => {
   return jwt.sign(
-    { userId: user._id, tenantId: user.tenantId, role: user.role },
+    { userId: user._id, tenantId: user.tenantId, role: user.role, roleId: user.roleId },
     process.env.JWT_SECRET,
     { expiresIn: '7d' }
   );
 };
+
+const PERMISSIONS_SEED = [
+  { key: 'users.create',       entity: 'users',       action: 'create' },
+  { key: 'users.read',         entity: 'users',       action: 'read'   },
+  { key: 'users.update',       entity: 'users',       action: 'update' },
+  { key: 'users.delete',       entity: 'users',       action: 'delete' },
+  { key: 'jobs.create',        entity: 'jobs',        action: 'create' },
+  { key: 'jobs.read',          entity: 'jobs',        action: 'read'   },
+  { key: 'jobs.update',        entity: 'jobs',        action: 'update' },
+  { key: 'jobs.delete',        entity: 'jobs',        action: 'delete' },
+  { key: 'services.create',    entity: 'services',    action: 'create' },
+  { key: 'services.read',      entity: 'services',    action: 'read'   },
+  { key: 'services.update',    entity: 'services',    action: 'update' },
+  { key: 'services.delete',    entity: 'services',    action: 'delete' },
+  { key: 'invoices.create',    entity: 'invoices',    action: 'create' },
+  { key: 'invoices.read',      entity: 'invoices',    action: 'read'   },
+  { key: 'invoices.update',    entity: 'invoices',    action: 'update' },
+  { key: 'invoices.delete',    entity: 'invoices',    action: 'delete' },
+  { key: 'roles.create',       entity: 'roles',       action: 'create' },
+  { key: 'roles.read',         entity: 'roles',       action: 'read'   },
+  { key: 'roles.update',       entity: 'roles',       action: 'update' },
+  { key: 'roles.delete',       entity: 'roles',       action: 'delete' },
+  { key: 'permissions.read',   entity: 'permissions', action: 'read'   },
+  { key: 'permissions.update', entity: 'permissions', action: 'update' },
+];
+
+/**
+ * Ensures global permissions exist, then creates the 6 default roles for a tenant.
+ * Returns the owner Role document.
+ */
+async function createDefaultRoles(tenantId) {
+  // Upsert global permissions
+  await Promise.all(
+    PERMISSIONS_SEED.map((p) =>
+      Permission.findOneAndUpdate({ key: p.key }, p, { upsert: true, new: true })
+    )
+  );
+
+  // Fetch all permission docs by key for easy lookup
+  const allPerms = await Permission.find({}).lean();
+  const byKey = {};
+  allPerms.forEach((p) => { byKey[p.key] = p._id; });
+
+  const pids = (keys) => keys.map((k) => byKey[k]).filter(Boolean);
+
+  const roleDefs = [
+    {
+      name: 'Owner',
+      code: 'owner',
+      isSystemRole: true,
+      permissions: pids(Object.keys(byKey)), // all
+    },
+    {
+      name: 'Director',
+      code: 'director',
+      isSystemRole: true,
+      permissions: pids([
+        'users.read', 'users.update',
+        'jobs.create', 'jobs.read', 'jobs.update', 'jobs.delete',
+        'services.create', 'services.read', 'services.update',
+        'invoices.read', 'invoices.update',
+        'roles.read', 'permissions.read',
+      ]),
+    },
+    {
+      name: 'Operations Manager',
+      code: 'manager_operations',
+      isSystemRole: true,
+      permissions: pids([
+        'jobs.create', 'jobs.read', 'jobs.update', 'jobs.delete',
+        'services.read', 'users.read', 'invoices.read',
+      ]),
+    },
+    {
+      name: 'HR Manager',
+      code: 'manager_hr',
+      isSystemRole: true,
+      permissions: pids(['users.create', 'users.read', 'users.update', 'users.delete']),
+    },
+    {
+      name: 'Staff',
+      code: 'staff',
+      isSystemRole: true,
+      permissions: pids(['jobs.read', 'services.read', 'invoices.read']),
+    },
+    {
+      name: 'Worker',
+      code: 'worker',
+      isSystemRole: true,
+      permissions: pids(['jobs.read']),
+    },
+  ];
+
+  let ownerRole = null;
+  for (const def of roleDefs) {
+    const role = await Role.findOneAndUpdate(
+      { tenantId, code: def.code },
+      { ...def, tenantId },
+      { upsert: true, new: true }
+    );
+    if (def.code === 'owner') ownerRole = role;
+  }
+
+  return ownerRole;
+}
 
 // POST /api/auth/register
 const register = async (req, res, next) => {
@@ -45,7 +152,9 @@ const register = async (req, res, next) => {
       timezone,
     });
 
-    // Check if email is already in use within tenant (shouldn't happen for first user)
+    // Create default roles for new tenant and get owner role
+    const ownerRole = await createDefaultRoles(tenant._id);
+
     const passwordHash = await bcrypt.hash(password, 12);
 
     const user = await User.create({
@@ -55,6 +164,7 @@ const register = async (req, res, next) => {
       email: email.toLowerCase(),
       passwordHash,
       role: 'owner',
+      roleId: ownerRole._id,
     });
 
     const token = generateToken(user);
@@ -69,6 +179,7 @@ const register = async (req, res, next) => {
           lastName: user.lastName,
           email: user.email,
           role: user.role,
+          roleId: user.roleId,
           tenantId: user.tenantId,
         },
         tenant: {
@@ -127,6 +238,7 @@ const login = async (req, res, next) => {
           lastName: user.lastName,
           email: user.email,
           role: user.role,
+          roleId: user.roleId,
           tenantId: user.tenantId,
         },
       },
@@ -153,6 +265,7 @@ const me = async (req, res, next) => {
         lastName:          user.lastName,
         email:             user.email,
         role:              user.role,
+        roleId:            user.roleId,
         preferredLanguage: user.preferredLanguage,
         phone:             user.phone,
         tenantId:          user.tenantId,

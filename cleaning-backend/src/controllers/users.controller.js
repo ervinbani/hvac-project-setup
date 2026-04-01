@@ -4,8 +4,8 @@ const User = require("../models/User");
 // GET /api/users
 const listUsers = async (req, res, next) => {
   try {
-    const VALID_ROLES = ["owner", "manager", "cleaner", "staff"];
-    const ROLE_HIERARCHY = { owner: 4, manager: 3, staff: 2, cleaner: 1 };
+    const VALID_ROLES = ["owner", "director", "manager_operations", "manager_hr", "staff", "worker"];
+    const ROLE_HIERARCHY = { owner: 6, director: 5, manager_operations: 4, manager_hr: 4, staff: 2, worker: 1 };
     const MAX_LIMIT = 100;
 
     const rawRole =
@@ -54,8 +54,8 @@ const listUsers = async (req, res, next) => {
 // POST /api/users
 const createUser = async (req, res, next) => {
   try {
-    const VALID_ROLES = ["owner", "manager", "cleaner", "staff"];
-    const ROLE_HIERARCHY = { owner: 4, manager: 3, staff: 2, cleaner: 1 };
+    const VALID_ROLES = ["owner", "director", "manager_operations", "manager_hr", "staff", "worker"];
+    const ROLE_HIERARCHY = { owner: 6, director: 5, manager_operations: 4, manager_hr: 4, staff: 2, worker: 1 };
 
     const {
       firstName,
@@ -130,8 +130,8 @@ const createUser = async (req, res, next) => {
 // PUT /api/users/:id
 const updateUser = async (req, res, next) => {
   try {
-    const VALID_ROLES = ["owner", "manager", "cleaner", "staff"];
-    const ROLE_HIERARCHY = { owner: 4, manager: 3, staff: 2, cleaner: 1 };
+    const VALID_ROLES = ["owner", "director", "manager_operations", "manager_hr", "staff", "worker"];
+    const ROLE_HIERARCHY = { owner: 6, director: 5, manager_operations: 4, manager_hr: 4, staff: 2, worker: 1 };
 
     const allowedFields = [
       "firstName",
@@ -222,7 +222,7 @@ const deleteUser = async (req, res, next) => {
 // GET /api/users/:id
 const getUser = async (req, res, next) => {
   try {
-    const ROLE_HIERARCHY = { owner: 4, manager: 3, staff: 2, cleaner: 1 };
+    const ROLE_HIERARCHY = { owner: 6, director: 5, manager_operations: 4, manager_hr: 4, staff: 2, worker: 1 };
 
     const user = await User.findOne({
       _id: req.params.id,

@@ -12,7 +12,9 @@
     "dev:mock": "nodemon server.mock.js",
     "test": "jest --runInBand --forceExit",
     "test:watch": "jest --watch --runInBand",
-    "test:coverage": "jest --runInBand --forceExit --coverage"
+    "test:coverage": "jest --runInBand --forceExit --coverage",
+    "seed": "node scripts/seed.js",
+    "seed:clean": "node scripts/clean.js && node scripts/seed.js"
   },
   "jest": {
     "testEnvironment": "node",
