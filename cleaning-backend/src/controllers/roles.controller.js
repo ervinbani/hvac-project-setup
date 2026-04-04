@@ -4,12 +4,24 @@ const Permission = require('../models/Permission');
 // GET /api/roles
 const listRoles = async (req, res, next) => {
   try {
-    const roles = await Role.find({ tenantId: req.user.tenantId, isActive: true })
-      .populate('permissions', 'key entity action description')
-      .sort({ name: 1 })
-      .lean();
+    const MAX_LIMIT = 100;
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(req.query.limit) || 20));
+    const skip  = (page - 1) * limit;
 
-    res.json({ success: true, data: roles });
+    const filter = { tenantId: req.user.tenantId, isActive: true };
+
+    const [roles, total] = await Promise.all([
+      Role.find(filter)
+        .populate('permissions', 'key entity action description')
+        .sort({ name: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Role.countDocuments(filter),
+    ]);
+
+    res.json({ success: true, data: roles, pagination: { total, page, limit } });
   } catch (err) {
     next(err);
   }
