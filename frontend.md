@@ -515,23 +515,27 @@ PATCH body: `{ "status": "in_progress" }` (one of the JobStatus values)
 **Query params (GET `/roles`):** `page` (default 1), `limit` (default 20, max 100)
 
 **Paginated response:**
+
 ```json
 {
   "success": true,
-  "data": [ /* Role objects */ ],
+  "data": [
+    /* Role objects */
+  ],
   "pagination": { "total": 5, "page": 1, "limit": 20 }
 }
 ```
 
 **Role object:**
+
 ```ts
 interface Role {
   _id: string;
   tenantId: string;
   name: string;
-  code: string;           // lowercase, unique per tenant
+  code: string; // lowercase, unique per tenant
   description?: string;
-  permissions: Permission[];  // populated
+  permissions: Permission[]; // populated
   isSystemRole: boolean;
   isActive: boolean;
   createdAt: string;

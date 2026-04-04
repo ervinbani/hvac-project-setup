@@ -1,19 +1,22 @@
-const Role = require('../models/Role');
-const Permission = require('../models/Permission');
+const Role = require("../models/Role");
+const Permission = require("../models/Permission");
 
 // GET /api/roles
 const listRoles = async (req, res, next) => {
   try {
     const MAX_LIMIT = 100;
-    const page  = Math.max(1, parseInt(req.query.page)  || 1);
-    const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(req.query.limit) || 20));
-    const skip  = (page - 1) * limit;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(
+      MAX_LIMIT,
+      Math.max(1, parseInt(req.query.limit) || 20),
+    );
+    const skip = (page - 1) * limit;
 
     const filter = { tenantId: req.user.tenantId, isActive: true };
 
     const [roles, total] = await Promise.all([
       Role.find(filter)
-        .populate('permissions', 'key entity action description')
+        .populate("permissions", "key entity action description")
         .sort({ name: 1 })
         .skip(skip)
         .limit(limit)
@@ -21,7 +24,11 @@ const listRoles = async (req, res, next) => {
       Role.countDocuments(filter),
     ]);
 
-    res.json({ success: true, data: roles, pagination: { total, page, limit } });
+    res.json({
+      success: true,
+      data: roles,
+      pagination: { total, page, limit },
+    });
   } catch (err) {
     next(err);
   }
@@ -30,12 +37,15 @@ const listRoles = async (req, res, next) => {
 // GET /api/roles/:id
 const getRole = async (req, res, next) => {
   try {
-    const role = await Role.findOne({ _id: req.params.id, tenantId: req.user.tenantId })
-      .populate('permissions', 'key entity action description')
+    const role = await Role.findOne({
+      _id: req.params.id,
+      tenantId: req.user.tenantId,
+    })
+      .populate("permissions", "key entity action description")
       .lean();
 
     if (!role) {
-      return res.status(404).json({ success: false, error: 'Role not found' });
+      return res.status(404).json({ success: false, error: "Role not found" });
     }
 
     res.json({ success: true, data: role });
@@ -50,18 +60,31 @@ const createRole = async (req, res, next) => {
     const { name, code, description, permissionIds } = req.body;
 
     if (!name || !code) {
-      return res.status(400).json({ success: false, error: 'name and code are required' });
+      return res
+        .status(400)
+        .json({ success: false, error: "name and code are required" });
     }
 
-    const existing = await Role.findOne({ tenantId: req.user.tenantId, code: code.toLowerCase() });
+    const existing = await Role.findOne({
+      tenantId: req.user.tenantId,
+      code: code.toLowerCase(),
+    });
     if (existing) {
-      return res.status(409).json({ success: false, error: 'Role code already exists for this tenant' });
+      return res
+        .status(409)
+        .json({
+          success: false,
+          error: "Role code already exists for this tenant",
+        });
     }
 
     // Validate permission IDs if provided
     let permissions = [];
     if (Array.isArray(permissionIds) && permissionIds.length > 0) {
-      const found = await Permission.find({ _id: { $in: permissionIds }, isActive: true }).lean();
+      const found = await Permission.find({
+        _id: { $in: permissionIds },
+        isActive: true,
+      }).lean();
       permissions = found.map((p) => p._id);
     }
 
@@ -69,11 +92,14 @@ const createRole = async (req, res, next) => {
       tenantId: req.user.tenantId,
       name,
       code: code.toLowerCase(),
-      description: description || '',
+      description: description || "",
       permissions,
     });
 
-    const populated = await role.populate('permissions', 'key entity action description');
+    const populated = await role.populate(
+      "permissions",
+      "key entity action description",
+    );
     res.status(201).json({ success: true, data: populated });
   } catch (err) {
     next(err);
@@ -83,14 +109,19 @@ const createRole = async (req, res, next) => {
 // PUT /api/roles/:id
 const updateRole = async (req, res, next) => {
   try {
-    const role = await Role.findOne({ _id: req.params.id, tenantId: req.user.tenantId });
+    const role = await Role.findOne({
+      _id: req.params.id,
+      tenantId: req.user.tenantId,
+    });
 
     if (!role) {
-      return res.status(404).json({ success: false, error: 'Role not found' });
+      return res.status(404).json({ success: false, error: "Role not found" });
     }
 
     if (role.isSystemRole) {
-      return res.status(403).json({ success: false, error: 'System roles cannot be modified' });
+      return res
+        .status(403)
+        .json({ success: false, error: "System roles cannot be modified" });
     }
 
     const { name, description, permissionIds } = req.body;
@@ -99,12 +130,18 @@ const updateRole = async (req, res, next) => {
     if (description !== undefined) role.description = description;
 
     if (Array.isArray(permissionIds)) {
-      const found = await Permission.find({ _id: { $in: permissionIds }, isActive: true }).lean();
+      const found = await Permission.find({
+        _id: { $in: permissionIds },
+        isActive: true,
+      }).lean();
       role.permissions = found.map((p) => p._id);
     }
 
     await role.save();
-    const populated = await role.populate('permissions', 'key entity action description');
+    const populated = await role.populate(
+      "permissions",
+      "key entity action description",
+    );
     res.json({ success: true, data: populated });
   } catch (err) {
     next(err);
@@ -114,20 +151,25 @@ const updateRole = async (req, res, next) => {
 // DELETE /api/roles/:id
 const deleteRole = async (req, res, next) => {
   try {
-    const role = await Role.findOne({ _id: req.params.id, tenantId: req.user.tenantId });
+    const role = await Role.findOne({
+      _id: req.params.id,
+      tenantId: req.user.tenantId,
+    });
 
     if (!role) {
-      return res.status(404).json({ success: false, error: 'Role not found' });
+      return res.status(404).json({ success: false, error: "Role not found" });
     }
 
     if (role.isSystemRole) {
-      return res.status(403).json({ success: false, error: 'System roles cannot be deleted' });
+      return res
+        .status(403)
+        .json({ success: false, error: "System roles cannot be deleted" });
     }
 
     role.isActive = false;
     await role.save();
 
-    res.json({ success: true, data: { message: 'Role deactivated' } });
+    res.json({ success: true, data: { message: "Role deactivated" } });
   } catch (err) {
     next(err);
   }
