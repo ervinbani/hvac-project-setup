@@ -17,6 +17,7 @@ const automationsRoutes = require("./routes/automations.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
 const rolesRoutes = require("./routes/roles.routes");
 const permissionsRoutes = require("./routes/permissions.routes");
+const inboxRoutes = require("./routes/inbox.routes");
 
 const app = express();
 
@@ -100,6 +101,7 @@ app.use("/api/jobs", jobsRoutes);
 app.use("/api/recurring", recurringRulesRoutes);
 app.use("/api/invoices", invoicesRoutes);
 app.use("/api/messages", messagesRoutes);
+app.use("/api/inbox", inboxRoutes);
 app.use("/api/automations", automationsRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/roles", rolesRoutes);

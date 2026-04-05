@@ -42,6 +42,21 @@ const listMessages = async (req, res, next) => {
   }
 };
 
+// Local mock transport — logs to console and immediately marks as delivered
+const localTransport = (message) => {
+  const border = '─'.repeat(50);
+  console.log(`\n📨 [LOCAL MESSAGE]`);
+  console.log(border);
+  console.log(`  Channel  : ${message.channel.toUpperCase()}`);
+  console.log(`  To       : customer ${message.customerId || 'N/A'}`);
+  console.log(`  Language : ${message.language || 'en'}`);
+  if (message.subject) console.log(`  Subject  : ${message.subject}`);
+  if (message.body)    console.log(`  Body     : ${message.body}`);
+  if (message.templateKey) console.log(`  Template : ${message.templateKey}`);
+  console.log(border + '\n');
+  return 'delivered';
+};
+
 // POST /api/messages/send
 const sendMessage = async (req, res, next) => {
   try {
@@ -54,9 +69,6 @@ const sendMessage = async (req, res, next) => {
       templateKey,
       subject,
       body,
-      provider,
-      providerMessageId,
-      status,
     } = req.body;
 
     if (!channel) {
@@ -73,12 +85,19 @@ const sendMessage = async (req, res, next) => {
       templateKey,
       subject,
       body,
-      provider,
-      providerMessageId,
-      status: status || 'queued',
+      provider:          'local',
+      providerMessageId: `local-${Date.now()}`,
+      status:            'queued',
     });
 
-    // Future: integrate with Twilio, SendGrid, etc.
+    // Use local transport in dev/test, real provider otherwise
+    if (!process.env.MESSAGE_PROVIDER || process.env.MESSAGE_PROVIDER === 'local') {
+      const deliveredStatus = localTransport(message);
+      message.status = deliveredStatus;
+      await message.save();
+    }
+    // Future: else if (process.env.MESSAGE_PROVIDER === 'twilio') { ... }
+    // Future: else if (process.env.MESSAGE_PROVIDER === 'sendgrid') { ... }
 
     res.status(201).json({ success: true, data: message });
   } catch (err) {
@@ -86,4 +105,23 @@ const sendMessage = async (req, res, next) => {
   }
 };
 
-module.exports = { listMessages, sendMessage };
+// DELETE /api/messages/:id — cancella un log messaggio (solo admin/staff)
+const deleteMessageLog = async (req, res, next) => {
+  try {
+    const message = await MessageLog.findOne({
+      _id: req.params.id,
+      tenantId: req.user.tenantId,
+    });
+
+    if (!message) {
+      return res.status(404).json({ success: false, error: 'Message not found' });
+    }
+
+    await message.deleteOne();
+    res.json({ success: true, message: 'Message deleted' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { listMessages, sendMessage, deleteMessageLog };
