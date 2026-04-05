@@ -3,6 +3,8 @@ const Customer = require('../models/Customer');
 const Service = require('../models/Service');
 const User = require('../models/User');
 
+const PRICE_HIDDEN_ROLES = ['cleaner', 'worker'];
+
 // GET /api/jobs
 const listJobs = async (req, res, next) => {
   try {
@@ -29,16 +31,18 @@ const listJobs = async (req, res, next) => {
     }
 
     // Cleaners only see their own jobs
-    if (req.user.role === 'cleaner') {
+    if (PRICE_HIDDEN_ROLES.includes(req.user.role)) {
       filter.assignedUsers = req.user.id;
     }
 
     const skip = (page - 1) * limit;
 
+    const isCleaner = PRICE_HIDDEN_ROLES.includes(req.user.role);
+
     const [jobs, total] = await Promise.all([
       Job.find(filter)
         .populate('customerId', 'firstName lastName email phone')
-        .populate('serviceId', 'name basePrice')
+        .populate('serviceId', isCleaner ? 'name' : 'name basePrice')
         .populate('assignedUsers', 'firstName lastName email')
         .sort({ scheduledStart: 1 })
         .skip(skip)
@@ -46,9 +50,13 @@ const listJobs = async (req, res, next) => {
       Job.countDocuments(filter),
     ]);
 
+    const data = isCleaner
+      ? jobs.map(j => { const o = j.toObject(); delete o.price; return o; })
+      : jobs;
+
     res.json({
       success: true,
-      data: jobs,
+      data,
       pagination: { total, page, limit },
     });
   } catch (err) {
@@ -59,14 +67,22 @@ const listJobs = async (req, res, next) => {
 // GET /api/jobs/:id
 const getJob = async (req, res, next) => {
   try {
+    const isCleaner = PRICE_HIDDEN_ROLES.includes(req.user.role);
+
     const job = await Job.findOne({ _id: req.params.id, tenantId: req.user.tenantId })
       .populate('customerId', 'firstName lastName email phone address')
-      .populate('serviceId', 'name description basePrice durationMinutes')
+      .populate('serviceId', isCleaner ? 'name description durationMinutes' : 'name description basePrice durationMinutes')
       .populate('assignedUsers', 'firstName lastName email phone')
       .populate('invoiceId', 'invoiceNumber status total');
 
     if (!job) {
       return res.status(404).json({ success: false, error: 'Job not found' });
+    }
+
+    if (isCleaner) {
+      const data = job.toObject();
+      delete data.price;
+      return res.json({ success: true, data });
     }
 
     res.json({ success: true, data: job });
@@ -201,7 +217,7 @@ const updateJobStatus = async (req, res, next) => {
     }
 
     // Cleaners: only allowed statuses + must be assigned to the job
-    if (req.user.role === 'cleaner') {
+    if (PRICE_HIDDEN_ROLES.includes(req.user.role)) {
       if (!cleanerStatuses.includes(status)) {
         return res.status(403).json({
           success: false,
