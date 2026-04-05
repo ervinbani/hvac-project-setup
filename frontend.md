@@ -95,38 +95,51 @@ Store the token in `localStorage` or a secure cookie. Persist the decoded user o
 
 ## 4. Roles & Permissions
 
-There are four roles. The UI must conditionally render actions based on the logged-in user's role.
+There are six roles. The UI must conditionally render actions based on the logged-in user's role.
 
-| Role      | Description                             |
-| --------- | --------------------------------------- |
-| `owner`   | Full access — super admin of the tenant |
-| `manager` | Everything except delete users          |
-| `staff`   | Create and edit — no delete             |
-| `cleaner` | Read-only + can update job status only  |
+| Role                 | Description                                                   |
+| -------------------- | ------------------------------------------------------------- |
+| `owner`              | Full access — super admin of the tenant                       |
+| `director`           | Near-full access; can view roles/permissions but not delete   |
+| `manager_operations` | Operations management — jobs, customers, invoices, scheduling |
+| `manager_hr`         | HR management — users, team, settings                         |
+| `staff`              | Create and edit — no delete on sensitive resources            |
+| `worker`             | Read-only + can update job status and checklist items only    |
+
+> **Shorthand used in this document:**
+>
+> - **manager+** = owner, director, manager_operations, manager_hr
+> - **staff+** = owner, director, manager_operations, manager_hr, staff
+> - **all** = all six roles (any authenticated user)
 
 ### Permission Matrix
 
-| Feature                | owner |  manager  |   staff   |  cleaner  |
-| ---------------------- | :---: | :-------: | :-------: | :-------: |
-| View users/team        |  ✅   |    ✅     |    ❌     |    ❌     |
-| Create/edit users      |  ✅   |    ✅     |    ❌     |    ❌     |
-| Delete users           |  ✅   |    ❌     |    ❌     |    ❌     |
-| View customers         |  ✅   |    ✅     |    ✅     |    ✅     |
-| Create/edit customer   |  ✅   |    ✅     |    ✅     |    ❌     |
-| Delete customer        |  ✅   |    ✅     |    ❌     |    ❌     |
-| View jobs              |  ✅   |    ✅     |    ✅     |    ✅     |
-| Create/edit job        |  ✅   |    ✅     |    ✅     |    ❌     |
-| Update job status      |  ✅   |    ✅     |    ✅     |    ✅     |
-| Delete job             |  ✅   |    ✅     |    ❌     |    ❌     |
-| View invoices          |  ✅   |    ✅     |    ✅     |    ❌     |
-| Create/edit invoice    |  ✅   |    ✅     |    ✅     |    ❌     |
-| Send invoice           |  ✅   |    ✅     |    ✅     |    ❌     |
-| View services          |  ✅   |    ✅     |    ✅     |    ✅     |
-| Create/edit service    |  ✅   |    ✅     |    ❌     |    ❌     |
-| Delete service         |  ✅   |    ✅     |    ❌     |    ❌     |
-| View automations       |  ✅   |    ✅     |    ✅     |    ✅     |
-| Create/edit automation |  ✅   |    ✅     |    ❌     |    ❌     |
-| View/edit settings     |  ✅   | ✅ (edit) | ✅ (view) | ✅ (view) |
+| Feature                       | worker | staff | mgr_hr | mgr_ops | director | owner |
+| ----------------------------- | :----: | :---: | :----: | :-----: | :------: | :---: |
+| View users/team               |   ❌   |  ✅   |   ✅   |   ✅    |    ✅    |  ✅   |
+| Create/edit users             |   ❌   |  ❌   |   ✅   |   ✅    |    ✅    |  ✅   |
+| Delete users                  |   ❌   |  ❌   |   ❌   |   ❌    |    ❌    |  ✅   |
+| View customers                |   ✅   |  ✅   |   ✅   |   ✅    |    ✅    |  ✅   |
+| Create/edit customer          |   ❌   |  ✅   |   ✅   |   ✅    |    ✅    |  ✅   |
+| Delete customer               |   ❌   |  ❌   |   ✅   |   ✅    |    ✅    |  ✅   |
+| View jobs                     |   ✅   |  ✅   |   ✅   |   ✅    |    ✅    |  ✅   |
+| Create/edit job               |   ❌   |  ✅   |   ✅   |   ✅    |    ✅    |  ✅   |
+| Update job status             |   ✅   |  ✅   |   ✅   |   ✅    |    ✅    |  ✅   |
+| Delete job                    |   ❌   |  ❌   |   ✅   |   ✅    |    ✅    |  ✅   |
+| View invoices                 |   ✅   |  ✅   |   ✅   |   ✅    |    ✅    |  ✅   |
+| Create/edit invoice           |   ❌   |  ✅   |   ✅   |   ✅    |    ✅    |  ✅   |
+| Send invoice                  |   ❌   |  ✅   |   ✅   |   ✅    |    ✅    |  ✅   |
+| Delete invoice                |   ❌   |  ❌   |   ❌   |   ❌    |    ❌    |  ✅   |
+| View services                 |   ✅   |  ✅   |   ✅   |   ✅    |    ✅    |  ✅   |
+| Create/edit/delete service    |   ❌   |  ❌   |   ✅   |   ✅    |    ✅    |  ✅   |
+| View automations              |   ✅   |  ✅   |   ✅   |   ✅    |    ✅    |  ✅   |
+| Create/edit/delete automation |   ❌   |  ❌   |   ✅   |   ✅    |    ✅    |  ✅   |
+| View messages                 |   ✅   |  ✅   |   ✅   |   ✅    |    ✅    |  ✅   |
+| Send messages                 |   ❌   |  ✅   |   ✅   |   ✅    |    ✅    |  ✅   |
+| View settings                 |   ✅   |  ✅   |   ✅   |   ✅    |    ✅    |  ✅   |
+| Edit settings (tenant)        |   ❌   |  ❌   |   ✅   |   ✅    |    ✅    |  ✅   |
+| View roles & permissions      |   ❌   |  ❌   |   ❌   |   ❌    |    ✅    |  ✅   |
+| Manage roles & permissions    |   ❌   |  ❌   |   ❌   |   ❌    |    ❌    |  ✅   |
 
 **Important:** The API enforces permissions server-side. The frontend should hide/disable UI elements that a role cannot access, but it does NOT need to implement logic itself — unauthorized API calls return HTTP `403`.
 
@@ -177,7 +190,13 @@ interface User {
   firstName: string;
   lastName: string;
   email: string;
-  role: "owner" | "manager" | "staff" | "cleaner";
+  role:
+    | "owner"
+    | "director"
+    | "manager_operations"
+    | "manager_hr"
+    | "staff"
+    | "worker";
   preferredLanguage: "en" | "es";
   phone?: string;
   isActive: boolean;
@@ -396,86 +415,139 @@ interface DashboardData {
 
 ### Tenant
 
-| Method | Path      | Required Role  |
-| ------ | --------- | -------------- |
-| GET    | `/tenant` | any            |
-| PUT    | `/tenant` | owner, manager |
+| Method | Path      | Required Role                                   |
+| ------ | --------- | ----------------------------------------------- |
+| GET    | `/tenant` | any                                             |
+| PUT    | `/tenant` | owner, director, manager_operations, manager_hr |
 
 ### Users (Team)
 
-| Method | Path         | Required Role  |
-| ------ | ------------ | -------------- |
-| GET    | `/users`     | owner, manager |
-| POST   | `/users`     | owner, manager |
-| PUT    | `/users/:id` | owner, manager |
-| DELETE | `/users/:id` | owner          |
+| Method | Path         | Required Role                                          |
+| ------ | ------------ | ------------------------------------------------------ |
+| GET    | `/users`     | owner, director, manager_operations, manager_hr, staff |
+| GET    | `/users/:id` | owner, director, manager_operations, manager_hr, staff |
+| POST   | `/users`     | owner, director, manager_operations, manager_hr        |
+| PUT    | `/users/:id` | owner, director, manager_operations, manager_hr        |
+| DELETE | `/users/:id` | owner                                                  |
 
 ### Customers
 
-| Method | Path             | Required Role         |
-| ------ | ---------------- | --------------------- |
-| GET    | `/customers`     | any                   |
-| GET    | `/customers/:id` | any                   |
-| POST   | `/customers`     | owner, manager, staff |
-| PUT    | `/customers/:id` | owner, manager, staff |
-| DELETE | `/customers/:id` | owner, manager        |
+| Method | Path             | Required Role                                          |
+| ------ | ---------------- | ------------------------------------------------------ |
+| GET    | `/customers`     | any                                                    |
+| GET    | `/customers/:id` | any                                                    |
+| POST   | `/customers`     | owner, director, manager_operations, manager_hr, staff |
+| PUT    | `/customers/:id` | owner, director, manager_operations, manager_hr, staff |
+| DELETE | `/customers/:id` | owner, director, manager_operations, manager_hr        |
 
 ### Services
 
-| Method | Path            | Required Role  |
-| ------ | --------------- | -------------- |
-| GET    | `/services`     | any            |
-| POST   | `/services`     | owner, manager |
-| PUT    | `/services/:id` | owner, manager |
-| DELETE | `/services/:id` | owner, manager |
+| Method | Path            | Required Role                                   |
+| ------ | --------------- | ----------------------------------------------- |
+| GET    | `/services`     | any                                             |
+| POST   | `/services`     | owner, director, manager_operations, manager_hr |
+| PUT    | `/services/:id` | owner, director, manager_operations, manager_hr |
+| DELETE | `/services/:id` | owner, director, manager_operations, manager_hr |
 
 ### Jobs
 
-| Method | Path               | Required Role                  |
-| ------ | ------------------ | ------------------------------ |
-| GET    | `/jobs`            | any                            |
-| GET    | `/jobs/:id`        | any                            |
-| POST   | `/jobs`            | owner, manager, staff          |
-| PUT    | `/jobs/:id`        | owner, manager, staff          |
-| PATCH  | `/jobs/:id/status` | owner, manager, staff, cleaner |
-| DELETE | `/jobs/:id`        | owner, manager                 |
+| Method | Path               | Required Role                                          |
+| ------ | ------------------ | ------------------------------------------------------ |
+| GET    | `/jobs`            | any                                                    |
+| GET    | `/jobs/:id`        | any                                                    |
+| POST   | `/jobs`            | owner, director, manager_operations, manager_hr, staff |
+| PUT    | `/jobs/:id`        | owner, director, manager_operations, manager_hr, staff |
+| PATCH  | `/jobs/:id/status` | all roles (including worker)                           |
+| DELETE | `/jobs/:id`        | owner, director, manager_operations, manager_hr        |
 
 PATCH body: `{ "status": "in_progress" }` (one of the JobStatus values)
 
 ### Invoices
 
-| Method | Path                 | Required Role         |
-| ------ | -------------------- | --------------------- |
-| GET    | `/invoices`          | owner, manager, staff |
-| GET    | `/invoices/:id`      | owner, manager, staff |
-| POST   | `/invoices`          | owner, manager, staff |
-| PUT    | `/invoices/:id`      | owner, manager, staff |
-| POST   | `/invoices/:id/send` | owner, manager, staff |
+| Method | Path                 | Required Role                                          |
+| ------ | -------------------- | ------------------------------------------------------ |
+| GET    | `/invoices`          | any                                                    |
+| GET    | `/invoices/:id`      | any                                                    |
+| POST   | `/invoices`          | owner, director, manager_operations, manager_hr, staff |
+| PUT    | `/invoices/:id`      | owner, director, manager_operations, manager_hr, staff |
+| POST   | `/invoices/:id/send` | owner, director, manager_operations, manager_hr, staff |
+| DELETE | `/invoices/:id`      | owner                                                  |
 
 ### Recurring Rules
 
-| Method | Path                  | Required Role         |
-| ------ | --------------------- | --------------------- |
-| GET    | `/recurringRules`     | any                   |
-| POST   | `/recurringRules`     | owner, manager, staff |
-| PUT    | `/recurringRules/:id` | owner, manager, staff |
-| DELETE | `/recurringRules/:id` | owner, manager        |
+| Method | Path             | Required Role                                          |
+| ------ | ---------------- | ------------------------------------------------------ |
+| GET    | `/recurring`     | any                                                    |
+| POST   | `/recurring`     | owner, director, manager_operations, manager_hr, staff |
+| PUT    | `/recurring/:id` | owner, director, manager_operations, manager_hr, staff |
+| DELETE | `/recurring/:id` | owner, director, manager_operations, manager_hr        |
 
 ### Messages
 
-| Method | Path             | Required Role         |
-| ------ | ---------------- | --------------------- |
-| GET    | `/messages`      | owner, manager, staff |
-| POST   | `/messages/send` | owner, manager, staff |
+| Method | Path             | Required Role                                          |
+| ------ | ---------------- | ------------------------------------------------------ |
+| GET    | `/messages`      | any                                                    |
+| POST   | `/messages/send` | owner, director, manager_operations, manager_hr, staff |
 
 ### Automations
 
-| Method | Path               | Required Role  |
-| ------ | ------------------ | -------------- |
-| GET    | `/automations`     | any            |
-| POST   | `/automations`     | owner, manager |
-| PUT    | `/automations/:id` | owner, manager |
-| DELETE | `/automations/:id` | owner, manager |
+| Method | Path               | Required Role                                   |
+| ------ | ------------------ | ----------------------------------------------- |
+| GET    | `/automations`     | any                                             |
+| POST   | `/automations`     | owner, director, manager_operations, manager_hr |
+| PUT    | `/automations/:id` | owner, director, manager_operations, manager_hr |
+| DELETE | `/automations/:id` | owner, director, manager_operations, manager_hr |
+
+### Roles
+
+> **Note:** `/api/roles` manages **custom role definitions** that an owner can create (with assigned permissions). These are separate from the six built-in system roles (`owner`, `director`, etc.) stored in the `User.role` enum. The list is empty until custom roles are created via `POST /api/roles`.
+
+| Method | Path         | Permission required |
+| ------ | ------------ | ------------------- |
+| GET    | `/roles`     | `roles.read`        |
+| GET    | `/roles/:id` | `roles.read`        |
+| POST   | `/roles`     | `roles.create`      |
+| PUT    | `/roles/:id` | `roles.update`      |
+| DELETE | `/roles/:id` | `roles.delete`      |
+
+> Role endpoints use a capability-based `authorize` middleware (not `requireRole`). Only `owner` has all role permissions by default; `director` has `roles.read`.
+
+**Query params (GET `/roles`):** `page` (default 1), `limit` (default 20, max 100)
+
+**Paginated response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    /* Role objects */
+  ],
+  "pagination": { "total": 5, "page": 1, "limit": 20 }
+}
+```
+
+**Role object:**
+
+```ts
+interface Role {
+  _id: string;
+  tenantId: string;
+  name: string;
+  code: string; // lowercase, unique per tenant
+  description?: string;
+  permissions: Permission[]; // populated
+  isSystemRole: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+### Permissions
+
+| Method | Path           | Permission required |
+| ------ | -------------- | ------------------- |
+| GET    | `/permissions` | `permissions.read`  |
 
 ### Dashboard
 
@@ -529,26 +601,28 @@ src/
 
 ## 8. Pages & Routes
 
-| Path             | Page                   | Roles allowed                     |
-| ---------------- | ---------------------- | --------------------------------- |
-| `/login`         | Login                  | public (unauthenticated)          |
-| `/register`      | Register (onboarding)  | public                            |
-| `/`              | Dashboard              | all                               |
-| `/customers`     | Customer List          | all                               |
-| `/customers/new` | New Customer           | owner, manager, staff             |
-| `/customers/:id` | Customer Detail / Edit | all (edit: owner, manager, staff) |
-| `/jobs`          | Job List / Calendar    | all                               |
-| `/jobs/new`      | New Job                | owner, manager, staff             |
-| `/jobs/:id`      | Job Detail / Edit      | all (edit limited by role)        |
-| `/invoices`      | Invoice List           | owner, manager, staff             |
-| `/invoices/new`  | New Invoice            | owner, manager, staff             |
-| `/invoices/:id`  | Invoice Detail / Edit  | owner, manager, staff             |
-| `/services`      | Service List           | all                               |
-| `/recurring`     | Recurring Rules List   | all                               |
-| `/team`          | Team / Users List      | owner, manager                    |
-| `/messages`      | Message Log            | owner, manager, staff             |
-| `/automations`   | Automation Rules       | all                               |
-| `/settings`      | Tenant Settings        | all (edit: owner, manager)        |
+| Path             | Page                   | Roles allowed                                                      |
+| ---------------- | ---------------------- | ------------------------------------------------------------------ |
+| `/login`         | Login                  | public (unauthenticated)                                           |
+| `/register`      | Register (onboarding)  | public                                                             |
+| `/`              | Dashboard              | all                                                                |
+| `/customers`     | Customer List          | all                                                                |
+| `/customers/new` | New Customer           | owner, director, manager_operations, manager_hr, staff             |
+| `/customers/:id` | Customer Detail / Edit | all (edit: owner, director, manager_operations, manager_hr, staff) |
+| `/jobs`          | Job List / Calendar    | all                                                                |
+| `/jobs/new`      | New Job                | owner, director, manager_operations, manager_hr, staff             |
+| `/jobs/:id`      | Job Detail / Edit      | all (edit: staff+; status update: all including worker)            |
+| `/invoices`      | Invoice List           | all                                                                |
+| `/invoices/new`  | New Invoice            | owner, director, manager_operations, manager_hr, staff             |
+| `/invoices/:id`  | Invoice Detail / Edit  | all (edit/send: staff+; delete: owner only)                        |
+| `/services`      | Service List           | all                                                                |
+| `/recurring`     | Recurring Rules List   | all                                                                |
+| `/team`          | Team / Users List      | owner, director, manager_operations, manager_hr, staff             |
+| `/messages`      | Message Log            | all                                                                |
+| `/automations`   | Automation Rules       | all                                                                |
+| `/settings`      | Tenant Settings        | all (edit: owner, director, manager_operations, manager_hr)        |
+| `/roles`         | Role Management        | director, owner                                                    |
+| `/roles/:id`     | Role Detail / Edit     | owner only (edit/delete)                                           |
 
 ---
 
@@ -584,7 +658,7 @@ Displays: KPI cards (active customers, jobs today, jobs this week, monthly reven
 
 ### Customer List
 
-Table with search/filter by name, status (lead / active / inactive), source. Click-through to detail page. "New Customer" button (hidden for `cleaner`).
+Table with search/filter by name, status (lead / active / inactive), source. Click-through to detail page. "New Customer" button (hidden for `worker`).
 
 ### Customer Detail
 
@@ -598,7 +672,7 @@ Two views: **List** (table, sortable by date/status) and **Calendar** (week view
 
 Shows all job fields. Status badge with color: `scheduled`=blue, `confirmed`=cyan, `in_progress`=yellow, `completed`=green, `canceled`=gray, `no_show`=red.
 
-**Status Update:** A dropdown or set of action buttons to advance status. `cleaner` role sees only the status-update action; all other fields are read-only.
+**Status Update:** A dropdown or set of action buttons to advance status. `worker` role sees only the status-update action; all other fields are read-only.
 
 **Checklist:** Interactive checklist items (can be checked/unchecked by cleaner and above).
 
@@ -616,7 +690,7 @@ Table showing customer → service → frequency. Create/edit form with frequenc
 
 ### Team Page (Users)
 
-List of team members with role badge. Create user form (owner / manager only). Delete only for `owner`.
+List of team members with role badge. Visible to `staff` and above. Create user form (owner, director, manager_operations, manager_hr only). Delete only for `owner`.
 
 ### Messages Page
 
@@ -626,11 +700,11 @@ Log table: date, customer, channel (SMS / Email / WhatsApp), direction (outbound
 
 ### Automations Page
 
-List of automation rules with trigger badge + channel badge. Toggle active/inactive. Create/edit form (owner/manager only).
+List of automation rules with trigger badge + channel badge. Toggle active/inactive. Create/edit/delete form (owner, director, manager_operations, manager_hr only).
 
 ### Settings Page
 
-Form to update tenant: name, contact email, phone, address, default language, branding (logo URL, primary color). Read-only for `staff` and `cleaner`.
+Form to update tenant: name, contact email, phone, address, default language, branding (logo URL, primary color). Read-only for `staff` and `worker`.
 
 ---
 
@@ -685,9 +759,9 @@ VITE_API_URL=http://localhost:5000/api
 
 ---
 
-## 13. Cleaner Mobile Experience
+## 13. Worker Mobile Experience
 
-The `cleaner` role primarily uses the app on mobile. Design the Job List and Job Detail pages to be **mobile-first**:
+The `worker` role primarily uses the app on mobile. Design the Job List and Job Detail pages to be **mobile-first**:
 
 - Large tap targets for status update buttons.
 - Checklist items are prominent and easy to toggle.
