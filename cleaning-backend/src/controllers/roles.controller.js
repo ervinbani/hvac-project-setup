@@ -119,9 +119,13 @@ const updateRole = async (req, res, next) => {
     }
 
     if (role.isSystemRole) {
-      return res
-        .status(403)
-        .json({ success: false, error: "System roles cannot be modified" });
+      // Owners can modify any system role except their own (prevents accidental lockout)
+      if (req.user.role !== 'owner') {
+        return res.status(403).json({ success: false, error: 'System roles cannot be modified' });
+      }
+      if (role.code === 'owner') {
+        return res.status(403).json({ success: false, error: 'The owner role cannot be modified' });
+      }
     }
 
     const { name, description, permissionIds } = req.body;
@@ -161,9 +165,12 @@ const deleteRole = async (req, res, next) => {
     }
 
     if (role.isSystemRole) {
-      return res
-        .status(403)
-        .json({ success: false, error: "System roles cannot be deleted" });
+      if (req.user.role !== 'owner') {
+        return res.status(403).json({ success: false, error: 'System roles cannot be deleted' });
+      }
+      if (role.code === 'owner') {
+        return res.status(403).json({ success: false, error: 'The owner role cannot be deleted' });
+      }
     }
 
     role.isActive = false;
