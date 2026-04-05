@@ -166,12 +166,18 @@ async function seed() {
 
   const rolesMap = {};
   for (const def of roleDefs) {
-    const role = await Role.findOneAndUpdate(
-      { tenantId: tid, code: def.code },
-      { ...def, tenantId: tid },
-      { upsert: true, new: true }
-    );
-    rolesMap[def.code] = role._id;
+    const existing = await Role.findOne({ tenantId: tid, code: def.code });
+    if (existing) {
+      // Role already exists — preserve any permissions the owner has customized,
+      // only update non-permission fields (name, description, isSystemRole).
+      existing.name         = def.name;
+      existing.isSystemRole = def.isSystemRole;
+      await existing.save();
+      rolesMap[def.code] = existing._id;
+    } else {
+      const role = await Role.create({ ...def, tenantId: tid });
+      rolesMap[def.code] = role._id;
+    }
   }
   console.log(`   ✅ ${Object.keys(rolesMap).length} roles upserted`);
 
@@ -196,7 +202,7 @@ async function seed() {
     usersData.map((u) => ({ ...u, tenantId: tid, passwordHash, isActive: true, lastLoginAt: daysAgo(randInt(0, 5)) }))
   );
   console.log(`   ✅ ${users.length} users created`);
-  const [owner, manager, , , , , cleaner1, cleaner2, cleaner3] = users;
+  const [owner, manager, , , , , worker1, worker2, worker3] = users;
 
   // ── 3. Services ───────────────────────────────────────────────────────────
   console.log('🌱 Seeding services...');
@@ -272,7 +278,7 @@ async function seed() {
     start.setHours(8 + (i % 4) * 2, 0, 0, 0);
     const end = new Date(start.getTime() + service.durationMinutes * 60 * 1000);
 
-    const assignedTo = [cleaner1, cleaner2, cleaner3][i % 3];
+    const assignedTo = [worker1, worker2, worker3][i % 3];
 
     return {
       tenantId:        tid,
@@ -391,7 +397,7 @@ async function seed() {
   const auditData = [
     { userId: owner._id,   entityType: 'Tenant',   entityId: tenant._id,   action: 'tenant.updated',   metadata: { field: 'subscription.plan', from: 'trial', to: 'pro' } },
     { userId: manager._id, entityType: 'Job',       entityId: jobs[0]._id,  action: 'job.status_changed', metadata: { from: 'scheduled', to: 'completed' } },
-    { userId: owner._id,   entityType: 'User',      entityId: cleaner1._id, action: 'user.created',     metadata: { role: 'cleaner' } },
+    { userId: owner._id,   entityType: 'User',      entityId: worker1._id, action: 'user.created',     metadata: { role: 'worker' } },
     { userId: manager._id, entityType: 'Invoice',   entityId: invoices[0]._id, action: 'invoice.sent', metadata: { invoiceNumber: invoices[0].invoiceNumber } },
     { userId: owner._id,   entityType: 'Customer',  entityId: customers[0]._id, action: 'customer.created', metadata: { source: 'website' } },
   ];
