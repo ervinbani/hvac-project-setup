@@ -1,21 +1,21 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const internalMessageSchema = new mongoose.Schema(
   {
     tenantId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Tenant',
+      ref: "Tenant",
       required: true,
       index: true,
     },
     fromUserId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
     toUserId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
     body: {
@@ -37,10 +37,15 @@ const internalMessageSchema = new mongoose.Schema(
       default: null,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 internalMessageSchema.index({ tenantId: 1, toUserId: 1, isRead: 1 });
-internalMessageSchema.index({ tenantId: 1, fromUserId: 1, toUserId: 1, createdAt: -1 });
+internalMessageSchema.index({
+  tenantId: 1,
+  fromUserId: 1,
+  toUserId: 1,
+  createdAt: -1,
+});
 
-module.exports = mongoose.model('InternalMessage', internalMessageSchema);
+module.exports = mongoose.model("InternalMessage", internalMessageSchema);

@@ -100,8 +100,8 @@ const listSent = async (req, res, next) => {
 
     const [messages, total] = await Promise.all([
       InternalMessage.find(filter)
-        .populate('fromUserId', 'firstName lastName email role')
-        .populate('toUserId', 'firstName lastName email role')
+        .populate("fromUserId", "firstName lastName email role")
+        .populate("toUserId", "firstName lastName email role")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -231,18 +231,17 @@ const deleteMessage = async (req, res, next) => {
     const message = await InternalMessage.findOne({
       _id: req.params.id,
       tenantId: req.user.tenantId,
-      $or: [
-        { fromUserId: req.user.id },
-        { toUserId: req.user.id },
-      ],
+      $or: [{ fromUserId: req.user.id }, { toUserId: req.user.id }],
     });
 
     if (!message) {
-      return res.status(404).json({ success: false, error: 'Message not found' });
+      return res
+        .status(404)
+        .json({ success: false, error: "Message not found" });
     }
 
     await message.deleteOne();
-    res.json({ success: true, message: 'Message deleted' });
+    res.json({ success: true, message: "Message deleted" });
   } catch (err) {
     next(err);
   }
