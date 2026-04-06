@@ -130,11 +130,11 @@ async function seed() {
 
   const roleDefs = [
     {
-      name: 'Owner',            code: 'owner',              isSystemRole: true,
+      name: 'Owner',            code: 'owner',              isSystemRole: true, isActive: true,
       permissions: pids(Object.keys(byKey)),
     },
     {
-      name: 'Director',         code: 'director',           isSystemRole: true,
+      name: 'Director',         code: 'director',           isSystemRole: true, isActive: true,
       permissions: pids([
         'users.read', 'users.update',
         'jobs.create', 'jobs.read', 'jobs.update', 'jobs.delete',
@@ -144,22 +144,22 @@ async function seed() {
       ]),
     },
     {
-      name: 'Operations Manager', code: 'manager_operations', isSystemRole: true,
+      name: 'Operations Manager', code: 'manager_operations', isSystemRole: true, isActive: true,
       permissions: pids([
         'jobs.create', 'jobs.read', 'jobs.update', 'jobs.delete',
         'services.read', 'users.read', 'invoices.read',
       ]),
     },
     {
-      name: 'HR Manager',       code: 'manager_hr',         isSystemRole: true,
+      name: 'HR Manager',       code: 'manager_hr',         isSystemRole: true, isActive: true,
       permissions: pids(['users.create', 'users.read', 'users.update', 'users.delete']),
     },
     {
-      name: 'Staff',            code: 'staff',              isSystemRole: true,
+      name: 'Staff',            code: 'staff',              isSystemRole: true, isActive: true,
       permissions: pids(['jobs.read', 'services.read', 'invoices.read']),
     },
     {
-      name: 'Worker',           code: 'worker',             isSystemRole: true,
+      name: 'Worker',           code: 'worker',             isSystemRole: true, isActive: true,
       permissions: pids(['jobs.read']),
     },
   ];
@@ -169,7 +169,7 @@ async function seed() {
     const role = await Role.findOneAndUpdate(
       { tenantId: tid, code: def.code },
       { ...def, tenantId: tid },
-      { upsert: true, new: true }
+      { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     rolesMap[def.code] = role._id;
   }

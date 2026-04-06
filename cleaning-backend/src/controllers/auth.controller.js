@@ -62,12 +62,14 @@ async function createDefaultRoles(tenantId) {
       name: 'Owner',
       code: 'owner',
       isSystemRole: true,
+      isActive: true,
       permissions: pids(Object.keys(byKey)), // all
     },
     {
       name: 'Director',
       code: 'director',
       isSystemRole: true,
+      isActive: true,
       permissions: pids([
         'users.read', 'users.update',
         'jobs.create', 'jobs.read', 'jobs.update', 'jobs.delete',
@@ -80,6 +82,7 @@ async function createDefaultRoles(tenantId) {
       name: 'Operations Manager',
       code: 'manager_operations',
       isSystemRole: true,
+      isActive: true,
       permissions: pids([
         'jobs.create', 'jobs.read', 'jobs.update', 'jobs.delete',
         'services.read', 'users.read', 'invoices.read',
@@ -89,18 +92,21 @@ async function createDefaultRoles(tenantId) {
       name: 'HR Manager',
       code: 'manager_hr',
       isSystemRole: true,
+      isActive: true,
       permissions: pids(['users.create', 'users.read', 'users.update', 'users.delete']),
     },
     {
       name: 'Staff',
       code: 'staff',
       isSystemRole: true,
+      isActive: true,
       permissions: pids(['jobs.read', 'services.read', 'invoices.read']),
     },
     {
       name: 'Worker',
       code: 'worker',
       isSystemRole: true,
+      isActive: true,
       permissions: pids(['jobs.read']),
     },
   ];
@@ -110,7 +116,7 @@ async function createDefaultRoles(tenantId) {
     const role = await Role.findOneAndUpdate(
       { tenantId, code: def.code },
       { ...def, tenantId },
-      { upsert: true, new: true }
+      { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     if (def.code === 'owner') ownerRole = role;
   }
