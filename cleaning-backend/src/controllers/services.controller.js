@@ -33,7 +33,7 @@ const listServices = async (req, res, next) => {
 // POST /api/services
 const createService = async (req, res, next) => {
   try {
-    const { name, description, durationMinutes, basePrice, isActive, customerId } =
+    const { name, description, durationMinutes, basePrice, priceUnit, isActive, customerId } =
       req.body;
 
     if (!name || !name.en || !name.es) {
@@ -51,6 +51,7 @@ const createService = async (req, res, next) => {
       description,
       durationMinutes,
       basePrice,
+      priceUnit,
       isActive,
     });
 
@@ -68,6 +69,7 @@ const updateService = async (req, res, next) => {
       "description",
       "durationMinutes",
       "basePrice",
+      "priceUnit",
       "isActive",
       "customerId",
     ];
