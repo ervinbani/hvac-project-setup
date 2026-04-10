@@ -1,24 +1,24 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
+const auth = require('../middleware/auth');
 const {
-  listInbox,
-  listSent,
+  getInbox,
+  getSent,
+  getUnreadCount,
   getThread,
-  sendInternalMessage,
+  sendMessage,
   markAsRead,
-  unreadCount,
   deleteMessage,
-} = require("../controllers/inbox.controller");
-const auth = require("../middleware/auth");
+} = require('../controllers/inbox.controller');
 
 router.use(auth);
 
-router.get("/", listInbox);
-router.get("/sent", listSent);
-router.get("/unread-count", unreadCount);
-router.get("/thread/:userId", getThread);
-router.post("/send", sendInternalMessage);
-router.patch("/:id/read", markAsRead);
-router.delete("/:id", deleteMessage);
+router.get('/',                  getInbox);
+router.get('/sent',              getSent);
+router.get('/unread-count',      getUnreadCount);
+router.get('/thread/:userId',    getThread);
+router.post('/send',             sendMessage);
+router.patch('/:id/read',        markAsRead);
+router.delete('/:id',            deleteMessage);
 
 module.exports = router;

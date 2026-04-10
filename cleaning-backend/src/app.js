@@ -13,6 +13,7 @@ const jobsRoutes = require("./routes/jobs.routes");
 const recurringRulesRoutes = require("./routes/recurringRules.routes");
 const invoicesRoutes = require("./routes/invoices.routes");
 const messagesRoutes = require("./routes/messages.routes");
+const inboxRoutes = require("./routes/inbox.routes");
 const automationsRoutes = require("./routes/automations.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
 const rolesRoutes = require("./routes/roles.routes");
