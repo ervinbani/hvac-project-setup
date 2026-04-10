@@ -18,7 +18,6 @@ const automationsRoutes = require("./routes/automations.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
 const rolesRoutes = require("./routes/roles.routes");
 const permissionsRoutes = require("./routes/permissions.routes");
-const inboxRoutes = require("./routes/inbox.routes");
 
 const app = express();
 
