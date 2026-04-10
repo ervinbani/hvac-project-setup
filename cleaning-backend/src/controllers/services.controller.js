@@ -33,7 +33,7 @@ const listServices = async (req, res, next) => {
 // POST /api/services
 const createService = async (req, res, next) => {
   try {
-    const { name, description, durationMinutes, basePrice, isActive } =
+    const { name, description, durationMinutes, basePrice, priceUnit, isActive, customerId } =
       req.body;
 
     if (!name || !name.en || !name.es) {
@@ -46,10 +46,12 @@ const createService = async (req, res, next) => {
 
     const service = await Service.create({
       tenantId: req.user.tenantId,
+      customerId: customerId || null,
       name,
       description,
       durationMinutes,
       basePrice,
+      priceUnit,
       isActive,
     });
 
@@ -67,7 +69,9 @@ const updateService = async (req, res, next) => {
       "description",
       "durationMinutes",
       "basePrice",
+      "priceUnit",
       "isActive",
+      "customerId",
     ];
     const updates = {};
     for (const field of allowedFields) {

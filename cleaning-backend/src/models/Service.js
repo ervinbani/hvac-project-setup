@@ -1,12 +1,17 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const serviceSchema = new mongoose.Schema(
   {
     tenantId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Tenant',
+      ref: "Tenant",
       required: true,
       index: true,
+    },
+    customerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Customer",
+      default: null,
     },
     name: {
       en: { type: String, required: true },
@@ -18,9 +23,14 @@ const serviceSchema = new mongoose.Schema(
     },
     durationMinutes: Number,
     basePrice: Number,
+    priceUnit: {
+      type: String,
+      enum: ["per_hour", "per_job", "per_day"],
+      default: "per_job",
+    },
     isActive: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-module.exports = mongoose.model('Service', serviceSchema);
+module.exports = mongoose.model("Service", serviceSchema);
