@@ -50,6 +50,7 @@ const jobSchema = new mongoose.Schema(
       ref: 'RecurringRule',
     },
     price: Number,
+    timeDuration: { type: Number, default: 0 },
     invoiceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Invoice',

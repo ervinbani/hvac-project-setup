@@ -108,6 +108,7 @@ const createJob = async (req, res, next) => {
       notesCustomer,
       recurringRuleId,
       price,
+      timeDuration,
     } = req.body;
 
     if (!customerId || !scheduledStart) {
@@ -150,6 +151,7 @@ const createJob = async (req, res, next) => {
       notesCustomer,
       recurringRuleId,
       price,
+      timeDuration,
     });
 
     res.status(201).json({ success: true, data: job });
@@ -175,6 +177,7 @@ const updateJob = async (req, res, next) => {
       'notesCustomer',
       'recurringRuleId',
       'price',
+      'timeDuration',
       'invoiceId',
     ];
 
