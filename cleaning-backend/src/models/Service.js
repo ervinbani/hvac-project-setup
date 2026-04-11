@@ -8,11 +8,6 @@ const serviceSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    customerId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Customer",
-      default: null,
-    },
     name: {
       en: { type: String, required: true },
       es: { type: String, required: true },
