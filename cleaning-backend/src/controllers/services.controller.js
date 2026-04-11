@@ -33,8 +33,14 @@ const listServices = async (req, res, next) => {
 // POST /api/services
 const createService = async (req, res, next) => {
   try {
-    const { name, description, durationMinutes, basePrice, priceUnit, isActive } =
-      req.body;
+    const {
+      name,
+      description,
+      durationMinutes,
+      basePrice,
+      priceUnit,
+      isActive,
+    } = req.body;
 
     if (!name || !name.en || !name.es) {
       return res.status(400).json({
