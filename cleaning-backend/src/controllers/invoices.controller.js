@@ -65,6 +65,7 @@ const listInvoices = async (req, res, next) => {
       Invoice.find(filter)
         .populate('customerId', 'firstName lastName email')
         .populate('jobId', 'title scheduledStart')
+        .populate('jobIds', 'title scheduledStart price priceUnit timeDuration')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
@@ -89,7 +90,8 @@ const getInvoice = async (req, res, next) => {
       tenantId: req.user.tenantId,
     })
       .populate('customerId', 'firstName lastName email phone address')
-      .populate('jobId', 'title scheduledStart propertyAddress');
+      .populate('jobId', 'title scheduledStart propertyAddress')
+      .populate('jobIds', 'title scheduledStart price priceUnit timeDuration');
 
     if (!invoice) {
       return res.status(404).json({ success: false, error: 'Invoice not found' });
@@ -104,7 +106,7 @@ const getInvoice = async (req, res, next) => {
 // POST /api/invoices
 const createInvoice = async (req, res, next) => {
   try {
-    const { customerId, jobId, items, currency, dueDate, discount, taxRate, notes, servicePeriod, issuedDate } = req.body;
+    const { customerId, jobId, jobIds, items, currency, dueDate, discount, taxRate, notes, servicePeriod, issuedDate } = req.body;
 
     if (!customerId) {
       return res.status(400).json({ success: false, error: 'customerId is required' });
@@ -120,6 +122,12 @@ const createInvoice = async (req, res, next) => {
         return res.status(400).json({ success: false, error: 'Invalid jobId' });
       }
     }
+    if (jobIds && jobIds.length > 0) {
+      const jobCount = await Job.countDocuments({ _id: { $in: jobIds }, tenantId: req.user.tenantId });
+      if (jobCount !== jobIds.length) {
+        return res.status(400).json({ success: false, error: 'One or more jobIds are invalid' });
+      }
+    }
 
     const sanitizedItems = sanitizeItems(items);
     const safeDiscount = Math.max(0, parseFloat(discount) || 0);
@@ -132,6 +140,7 @@ const createInvoice = async (req, res, next) => {
       tenantId: req.user.tenantId,
       customerId,
       jobId,
+      jobIds: jobIds || [],
       invoiceNumber,
       customerSnapshot: buildCustomerSnapshot(customer),
       issuedDate: issuedDate || new Date(),
@@ -196,6 +205,7 @@ const updateInvoice = async (req, res, next) => {
     if (req.body.notes !== undefined) updates.notes = String(req.body.notes).slice(0, 1000);
     if (req.body.servicePeriod) updates.servicePeriod = req.body.servicePeriod;
     if (req.body.issuedDate) updates.issuedDate = req.body.issuedDate;
+    if (req.body.jobIds !== undefined) updates.jobIds = req.body.jobIds;
 
     const invoice = await Invoice.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.user.tenantId },

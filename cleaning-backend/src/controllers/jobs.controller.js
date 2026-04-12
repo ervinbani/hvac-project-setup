@@ -140,6 +140,7 @@ const createJob = async (req, res, next) => {
       notesCustomer,
       recurringRuleId,
       price,
+      priceUnit,
       timeDuration,
     } = req.body;
 
@@ -201,6 +202,7 @@ const createJob = async (req, res, next) => {
       notesCustomer,
       recurringRuleId,
       price,
+      priceUnit,
       timeDuration,
     });
 
@@ -227,6 +229,7 @@ const updateJob = async (req, res, next) => {
       "notesCustomer",
       "recurringRuleId",
       "price",
+      "priceUnit",
       "timeDuration",
       "invoiceId",
     ];

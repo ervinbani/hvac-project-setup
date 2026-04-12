@@ -57,6 +57,11 @@ const jobSchema = new mongoose.Schema(
       ref: "RecurringRule",
     },
     price: Number,
+    priceUnit: {
+      type: String,
+      enum: ['per_hour', 'per_job', 'per_day'],
+      default: 'per_job',
+    },
     timeDuration: { type: Number, default: 0 },
     invoiceId: {
       type: mongoose.Schema.Types.ObjectId,

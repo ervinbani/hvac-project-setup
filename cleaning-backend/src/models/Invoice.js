@@ -16,7 +16,14 @@ const invoiceSchema = new mongoose.Schema(
     jobId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Job',
+      // keep for backward compat, deprecated
     },
+    jobIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Job',
+      },
+    ],
     invoiceNumber: { type: String, required: true },
 
     // Snapshot cliente al momento dell'emissione
@@ -73,6 +80,7 @@ const invoiceSchema = new mongoose.Schema(
 
 invoiceSchema.index({ tenantId: 1, invoiceNumber: 1 }, { unique: true });
 invoiceSchema.index({ tenantId: 1, customerId: 1 });
+invoiceSchema.index({ tenantId: 1, jobIds: 1 });
 invoiceSchema.index({ tenantId: 1, status: 1 });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);
