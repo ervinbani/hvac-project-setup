@@ -178,12 +178,10 @@ const createJob = async (req, res, next) => {
         tenantId: req.user.tenantId,
       });
       if (userCount !== assignedUsers.length) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            error: "One or more assignedUsers are invalid",
-          });
+        return res.status(400).json({
+          success: false,
+          error: "One or more assignedUsers are invalid",
+        });
       }
     }
 

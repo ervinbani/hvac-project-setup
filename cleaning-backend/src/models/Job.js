@@ -59,8 +59,8 @@ const jobSchema = new mongoose.Schema(
     price: Number,
     priceUnit: {
       type: String,
-      enum: ['per_hour', 'per_job', 'per_day'],
-      default: 'per_job',
+      enum: ["per_hour", "per_job", "per_day"],
+      default: "per_job",
     },
     timeDuration: { type: Number, default: 0 },
     invoiceId: {
