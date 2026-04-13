@@ -4,6 +4,7 @@ const {
   listRecurringRules,
   createRecurringRule,
   updateRecurringRule,
+  generateJobs,
   deleteRecurringRule,
 } = require('../controllers/recurringRules.controller');
 const auth = require('../middleware/auth');
@@ -16,6 +17,7 @@ router.use(auth);
 
 router.get('/', listRecurringRules);
 router.post('/', requireRole(...ADMIN_STAFF), createRecurringRule);
+router.post('/:id/generate', requireRole(...ADMIN_STAFF), generateJobs);
 router.put('/:id', requireRole(...ADMIN_STAFF), updateRecurringRule);
 router.delete('/:id', requireRole(...ADMIN), deleteRecurringRule);
 
