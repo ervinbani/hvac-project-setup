@@ -1,5 +1,5 @@
-const RecurringRule = require('../models/RecurringRule');
-const Job = require('../models/Job');
+const RecurringRule = require("../models/RecurringRule");
+const Job = require("../models/Job");
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -10,15 +10,15 @@ const Job = require('../models/Job');
  */
 const generateOccurrenceDates = (rule, from, to) => {
   const dates = [];
-  const [hh, mm] = rule.startTime.split(':').map(Number);
+  const [hh, mm] = rule.startTime.split(":").map(Number);
 
   // Resolve effective days array
   const activeDays =
     rule.daysOfWeek && rule.daysOfWeek.length > 0
       ? rule.daysOfWeek
       : rule.dayOfWeek != null
-      ? [rule.dayOfWeek]
-      : [1]; // fallback monday
+        ? [rule.dayOfWeek]
+        : [1]; // fallback monday
 
   // Active months filter (1-12); empty = all months
   const activeMonths =
@@ -29,7 +29,7 @@ const generateOccurrenceDates = (rule, from, to) => {
   const cursor = new Date(from);
   cursor.setUTCHours(hh, mm, 0, 0);
 
-  if (rule.frequency === 'monthly') {
+  if (rule.frequency === "monthly") {
     // Jump to dayOfMonth in current month, advance if already past
     cursor.setUTCDate(rule.dayOfMonth || 1);
     if (cursor < from) cursor.setUTCMonth(cursor.getUTCMonth() + 1);
@@ -41,7 +41,7 @@ const generateOccurrenceDates = (rule, from, to) => {
       }
       cursor.setUTCMonth(cursor.getUTCMonth() + 1);
     }
-  } else if (rule.frequency === 'daily') {
+  } else if (rule.frequency === "daily") {
     while (cursor <= to) {
       const month1 = cursor.getUTCMonth() + 1;
       if (!activeMonths || activeMonths.has(month1)) {
@@ -78,9 +78,11 @@ const generateJobsForRule = async (rule, from, to) => {
   // Fetch existing jobs for this rule to avoid duplicates
   const existing = await Job.find(
     { recurringRuleId: rule._id, scheduledStart: { $gte: from, $lte: to } },
-    { scheduledStart: 1 }
+    { scheduledStart: 1 },
   ).lean();
-  const existingTimes = new Set(existing.map((j) => j.scheduledStart.getTime()));
+  const existingTimes = new Set(
+    existing.map((j) => j.scheduledStart.getTime()),
+  );
 
   const toCreate = occurrences
     .filter((d) => !existingTimes.has(d.getTime()))
@@ -102,7 +104,7 @@ const generateJobsForRule = async (rule, from, to) => {
         timeDuration: rule.timeDuration,
         price: rule.price,
         priceUnit: rule.priceUnit,
-        status: 'scheduled',
+        status: "scheduled",
       };
     });
 
@@ -118,11 +120,11 @@ const listRecurringRules = async (req, res, next) => {
     const { customerId, isActive } = req.query;
     const filter = { tenantId: req.user.tenantId };
     if (customerId) filter.customerId = customerId;
-    if (isActive !== undefined) filter.isActive = isActive === 'true';
+    if (isActive !== undefined) filter.isActive = isActive === "true";
 
     const rules = await RecurringRule.find(filter)
-      .populate('customerId', 'firstName lastName email')
-      .populate('serviceId', 'name basePrice')
+      .populate("customerId", "firstName lastName email")
+      .populate("serviceId", "name basePrice")
       .sort({ createdAt: -1 });
 
     res.json({ success: true, data: rules });
@@ -157,7 +159,7 @@ const createRecurringRule = async (req, res, next) => {
     if (!customerId || !frequency || !startDate || !startTime) {
       return res.status(400).json({
         success: false,
-        error: 'customerId, frequency, startDate and startTime are required',
+        error: "customerId, frequency, startDate and startTime are required",
       });
     }
 
@@ -185,12 +187,19 @@ const createRecurringRule = async (req, res, next) => {
     // Auto-generate occurrences for the next 90 days
     const from = new Date(startDate);
     const horizon = endDate
-      ? new Date(Math.min(new Date(endDate).getTime(), from.getTime() + 90 * 24 * 60 * 60 * 1000))
+      ? new Date(
+          Math.min(
+            new Date(endDate).getTime(),
+            from.getTime() + 90 * 24 * 60 * 60 * 1000,
+          ),
+        )
       : new Date(from.getTime() + 90 * 24 * 60 * 60 * 1000);
 
     const jobs = await generateJobsForRule(rule, from, horizon);
 
-    res.status(201).json({ success: true, data: rule, jobsGenerated: jobs.length });
+    res
+      .status(201)
+      .json({ success: true, data: rule, jobsGenerated: jobs.length });
   } catch (err) {
     next(err);
   }
@@ -200,10 +209,22 @@ const createRecurringRule = async (req, res, next) => {
 const updateRecurringRule = async (req, res, next) => {
   try {
     const allowedFields = [
-      'serviceId', 'frequency', 'dayOfWeek', 'daysOfWeek', 'dayOfMonth',
-      'monthsOfYear', 'startDate', 'endDate', 'isActive',
-      'title', 'startTime', 'timeDuration', 'price', 'priceUnit',
-      'propertyAddress', 'assignedUsers',
+      "serviceId",
+      "frequency",
+      "dayOfWeek",
+      "daysOfWeek",
+      "dayOfMonth",
+      "monthsOfYear",
+      "startDate",
+      "endDate",
+      "isActive",
+      "title",
+      "startTime",
+      "timeDuration",
+      "price",
+      "priceUnit",
+      "propertyAddress",
+      "assignedUsers",
     ];
 
     const updates = {};
@@ -216,11 +237,13 @@ const updateRecurringRule = async (req, res, next) => {
     const rule = await RecurringRule.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.user.tenantId },
       { $set: updates },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!rule) {
-      return res.status(404).json({ success: false, error: 'Recurring rule not found' });
+      return res
+        .status(404)
+        .json({ success: false, error: "Recurring rule not found" });
     }
 
     res.json({ success: true, data: rule });
@@ -238,17 +261,23 @@ const generateJobs = async (req, res, next) => {
     });
 
     if (!rule) {
-      return res.status(404).json({ success: false, error: 'Recurring rule not found' });
+      return res
+        .status(404)
+        .json({ success: false, error: "Recurring rule not found" });
     }
 
     const from = req.query.from ? new Date(req.query.from) : new Date();
     const defaultTo = new Date(from.getTime() + 90 * 24 * 60 * 60 * 1000);
     const to = req.query.to
-      ? new Date(Math.min(new Date(req.query.to).getTime(), defaultTo.getTime()))
+      ? new Date(
+          Math.min(new Date(req.query.to).getTime(), defaultTo.getTime()),
+        )
       : defaultTo;
 
     if (isNaN(from) || isNaN(to) || from > to) {
-      return res.status(400).json({ success: false, error: 'Invalid date range' });
+      return res
+        .status(400)
+        .json({ success: false, error: "Invalid date range" });
     }
 
     const jobs = await generateJobsForRule(rule, from, to);
@@ -268,10 +297,12 @@ const deleteRecurringRule = async (req, res, next) => {
     });
 
     if (!rule) {
-      return res.status(404).json({ success: false, error: 'Recurring rule not found' });
+      return res
+        .status(404)
+        .json({ success: false, error: "Recurring rule not found" });
     }
 
-    res.json({ success: true, data: { message: 'Recurring rule deleted' } });
+    res.json({ success: true, data: { message: "Recurring rule deleted" } });
   } catch (err) {
     next(err);
   }
@@ -284,4 +315,3 @@ module.exports = {
   generateJobs,
   deleteRecurringRule,
 };
-
