@@ -1,4 +1,9 @@
-const { PutObjectCommand, DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command } = require("@aws-sdk/client-s3");
+const {
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
+} = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const { randomUUID } = require("crypto");
 const path = require("path");
@@ -14,7 +19,13 @@ const ALLOWED_TYPES = {
 };
 
 // Valid resource types → maps to storage path segment
-const VALID_RESOURCES = ["invoices", "customers", "jobs", "services", "tenants"];
+const VALID_RESOURCES = [
+  "invoices",
+  "customers",
+  "jobs",
+  "services",
+  "tenants",
+];
 
 const PRESIGNED_URL_TTL = 300; // 5 minutes
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
@@ -87,7 +98,9 @@ const getPresignedUploadUrl = async (req, res) => {
     });
   } catch (err) {
     console.error("[R2] getPresignedUploadUrl error:", err.message);
-    return res.status(500).json({ success: false, error: "Could not generate upload URL" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Could not generate upload URL" });
   }
 };
 
@@ -123,7 +136,9 @@ const getPresignedReadUrl = async (req, res) => {
     });
   } catch (err) {
     console.error("[R2] getPresignedReadUrl error:", err.message);
-    return res.status(500).json({ success: false, error: "Could not generate read URL" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Could not generate read URL" });
   }
 };
 
@@ -156,7 +171,9 @@ const deleteFile = async (req, res) => {
     return res.status(200).json({ success: true, data: { deleted: key } });
   } catch (err) {
     console.error("[R2] deleteFile error:", err.message);
-    return res.status(500).json({ success: false, error: "Could not delete file" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Could not delete file" });
   }
 };
 
@@ -172,7 +189,9 @@ const listFiles = async (req, res) => {
   const tenantId = req.user.tenantId;
 
   if (!resource) {
-    return res.status(400).json({ success: false, error: "resource is required" });
+    return res
+      .status(400)
+      .json({ success: false, error: "resource is required" });
   }
 
   if (!VALID_RESOURCES.includes(resource)) {
@@ -214,8 +233,15 @@ const listFiles = async (req, res) => {
     });
   } catch (err) {
     console.error("[R2] listFiles error:", err.message);
-    return res.status(500).json({ success: false, error: "Could not list files" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Could not list files" });
   }
 };
 
-module.exports = { getPresignedUploadUrl, getPresignedReadUrl, deleteFile, listFiles };
+module.exports = {
+  getPresignedUploadUrl,
+  getPresignedReadUrl,
+  deleteFile,
+  listFiles,
+};

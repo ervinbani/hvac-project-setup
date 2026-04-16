@@ -9,16 +9,30 @@ const {
 const auth = require("../middleware/auth");
 const requireRole = require("../middleware/requireRole");
 
-const UPLOAD_ROLES = ["owner", "director", "manager_operations", "manager_hr", "staff"];
+const UPLOAD_ROLES = [
+  "owner",
+  "director",
+  "manager_operations",
+  "manager_hr",
+  "staff",
+];
 const DELETE_ROLES = ["owner", "director", "manager_operations"];
 
 router.use(auth);
 
 // Generate a presigned PUT URL for direct upload to R2
-router.get("/presigned-url", requireRole(...UPLOAD_ROLES), getPresignedUploadUrl);
+router.get(
+  "/presigned-url",
+  requireRole(...UPLOAD_ROLES),
+  getPresignedUploadUrl,
+);
 
 // Generate a presigned GET URL to read a private file
-router.get("/presigned-read", requireRole(...UPLOAD_ROLES), getPresignedReadUrl);
+router.get(
+  "/presigned-read",
+  requireRole(...UPLOAD_ROLES),
+  getPresignedReadUrl,
+);
 
 // List files for a resource (and optionally a specific refId)
 router.get("/list", requireRole(...UPLOAD_ROLES), listFiles);
