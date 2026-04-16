@@ -18,6 +18,7 @@ const automationsRoutes = require("./routes/automations.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
 const rolesRoutes = require("./routes/roles.routes");
 const permissionsRoutes = require("./routes/permissions.routes");
+const uploadsRoutes = require("./routes/uploads.routes");
 
 const app = express();
 
@@ -98,6 +99,7 @@ app.use("/api/users", usersRoutes);
 app.use("/api/customers", customersRoutes);
 app.use("/api/services", servicesRoutes);
 app.use("/api/jobs", jobsRoutes);
+app.use("/api/uploads", uploadsRoutes);
 app.use("/api/recurring", recurringRulesRoutes);
 app.use("/api/invoices", invoicesRoutes);
 app.use("/api/messages", messagesRoutes);
