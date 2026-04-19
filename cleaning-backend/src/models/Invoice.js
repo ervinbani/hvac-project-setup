@@ -55,7 +55,12 @@ const invoiceSchema = new mongoose.Schema(
     ],
 
     subtotal: Number,
-    discount: { type: Number, default: 0 },
+    discount: {
+      type: { type: String, enum: ["percentage", "fixed"], default: "fixed" },
+      value: { type: Number, default: 0, min: 0 },
+      // Computed and stored at save time – do NOT recompute on read
+      amount: { type: Number, default: 0 },
+    },
     taxRate: { type: Number, default: 0 },
     tax: Number,
     total: Number,
