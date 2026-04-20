@@ -240,8 +240,7 @@ const updateInvoice = async (req, res, next) => {
       updates.taxRate = Math.max(0, parseFloat(req.body.taxRate) || 0);
     if (req.body.subtotal !== undefined)
       updates.subtotal = parseFloat(req.body.subtotal) || 0;
-    if (req.body.tax !== undefined)
-      updates.tax = parseFloat(req.body.tax) || 0;
+    if (req.body.tax !== undefined) updates.tax = parseFloat(req.body.tax) || 0;
     if (req.body.total !== undefined)
       updates.total = parseFloat(req.body.total) || 0;
 
