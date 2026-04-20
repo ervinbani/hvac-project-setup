@@ -50,6 +50,10 @@ const invoiceSchema = new mongoose.Schema(
         quantity: Number,
         unit: { type: String, default: "hours" },
         unitPrice: Number,
+        priceUnit: {
+          type: String,
+          enum: ["per_hour", "per_job", "per_day", "no_price"],
+        },
         total: Number,
       },
     ],
