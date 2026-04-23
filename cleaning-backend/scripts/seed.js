@@ -110,6 +110,27 @@ const fakeAddress = () => ({
 // ─── Main seed function ───────────────────────────────────────────────────────
 
 async function seed() {
+  // ── 0. Clear existing tenant data ─────────────────────────────────────────
+  console.log("🧹 Clearing existing data for slug 'brillo'...");
+  const existingTenant = await Tenant.findOne({ slug: "brillo" }).lean();
+  if (existingTenant) {
+    const tid = existingTenant._id;
+    await Promise.all([
+      User.deleteMany({ tenantId: tid }),
+      Role.deleteMany({ tenantId: tid }),
+      Customer.deleteMany({ tenantId: tid }),
+      Service.deleteMany({ tenantId: tid }),
+      Job.deleteMany({ tenantId: tid }),
+      RecurringRule.deleteMany({ tenantId: tid }),
+      Invoice.deleteMany({ tenantId: tid }),
+      AutomationRule.deleteMany({ tenantId: tid }),
+      AuditLog.deleteMany({ tenantId: tid }),
+      MessageLog.deleteMany({ tenantId: tid }),
+      Tenant.deleteOne({ _id: tid }),
+    ]);
+    console.log("   ✅ Cleared");
+  }
+
   // ── 1. Tenant ──────────────────────────────────────────────────────────────
   console.log("🌱 Seeding tenant...");
   const tenant = await Tenant.create({
@@ -456,10 +477,11 @@ async function seed() {
     tenantId: tid,
     customerId: c._id,
     serviceId: services[i % 2]._id,
-    frequency: ["weekly", "biweekly", "monthly"][i % 3],
+    frequency: ["weekly", "monthly", "daily"][i % 3],
     dayOfWeek: (i + 1) % 7,
     startDate: daysAgo(30),
     endDate: daysFromNow(180),
+    startTime: `${String(8 + (i % 4) * 2).padStart(2, "0")}:00`,
     isActive: true,
   }));
   const recurringRules = await RecurringRule.insertMany(recurringData);
