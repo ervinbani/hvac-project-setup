@@ -3,21 +3,6 @@ const Tenant = require("../models/Tenant");
 const Customer = require("../models/Customer");
 const Job = require("../models/Job");
 
-const calcTotals = (items = [], discount = 0, taxRate = 0) => {
-  const subtotal = items.reduce(
-    (sum, item) => sum + (item.quantity || 1) * (item.unitPrice || 0),
-    0,
-  );
-  const discounted = Math.max(0, subtotal - discount);
-  const tax = parseFloat((discounted * (taxRate / 100)).toFixed(2));
-  const total = parseFloat((discounted + tax).toFixed(2));
-  return {
-    subtotal: parseFloat(subtotal.toFixed(2)),
-    tax,
-    total,
-  };
-};
-
 const generateInvoiceNumber = async (tenantId) => {
   const tenant = await Tenant.findById(tenantId).select("slug");
   const slug = tenant ? tenant.slug.toUpperCase() : "INV";
@@ -33,18 +18,25 @@ const buildCustomerSnapshot = (customer) => ({
   vatNumber: customer.vatNumber || "",
 });
 
+const VALID_PRICE_UNITS = ["per_hour", "per_job", "per_day", "no_price"];
+
 const sanitizeItems = (items = []) =>
   items.map((item) => {
-    const qty = Math.max(0, parseFloat(item.quantity) || 1);
-    const price = Math.max(0, parseFloat(item.unitPrice) || 0);
-    return {
+    const isNoPrice = item.priceUnit === "no_price";
+    const qty = isNoPrice ? 0 : Math.max(0, parseFloat(item.quantity) || 1);
+    const price = isNoPrice ? 0 : Math.max(0, parseFloat(item.unitPrice) || 0);
+    const sanitized = {
       description: String(item.description || "").slice(0, 500),
       serviceType: String(item.serviceType || "").slice(0, 100),
       quantity: qty,
-      unit: String(item.unit || "hours").slice(0, 20),
+      unit: isNoPrice ? "no_price" : String(item.unit || "hours").slice(0, 20),
       unitPrice: price,
-      total: parseFloat((qty * price).toFixed(2)),
+      total: isNoPrice ? 0 : parseFloat((qty * price).toFixed(2)),
     };
+    if (item.priceUnit && VALID_PRICE_UNITS.includes(item.priceUnit)) {
+      sanitized.priceUnit = item.priceUnit;
+    }
+    return sanitized;
   });
 
 // GET /api/invoices
@@ -177,13 +169,10 @@ const createInvoice = async (req, res, next) => {
     }
 
     const sanitizedItems = sanitizeItems(items);
-    const safeDiscount = Math.max(0, parseFloat(discount) || 0);
     const safeTaxRate = Math.max(0, parseFloat(taxRate) || 0);
-    const { subtotal, tax, total } = calcTotals(
-      sanitizedItems,
-      safeDiscount,
-      safeTaxRate,
-    );
+    const safeSubtotal = parseFloat(req.body.subtotal) || 0;
+    const safeTax = parseFloat(req.body.tax) || 0;
+    const safeTotal = parseFloat(req.body.total) || 0;
 
     const invoiceNumber = await generateInvoiceNumber(req.user.tenantId);
 
@@ -198,11 +187,11 @@ const createInvoice = async (req, res, next) => {
       dueDate,
       servicePeriod: servicePeriod || {},
       items: sanitizedItems,
-      subtotal,
-      discount: safeDiscount,
+      subtotal: safeSubtotal,
+      discount: discount || { type: "fixed", value: 0, amount: 0 },
       taxRate: safeTaxRate,
-      tax,
-      total,
+      tax: safeTax,
+      total: safeTotal,
       currency: currency || "USD",
       status: "draft",
       notes: notes ? String(notes).slice(0, 1000) : undefined,
@@ -246,42 +235,17 @@ const updateInvoice = async (req, res, next) => {
         .json({ success: false, error: "Invoice not found" });
     }
 
-    const newDiscount =
-      req.body.discount !== undefined
-        ? Math.max(0, parseFloat(req.body.discount) || 0)
-        : current.discount;
-    const newTaxRate =
-      req.body.taxRate !== undefined
-        ? Math.max(0, parseFloat(req.body.taxRate) || 0)
-        : current.taxRate;
-
-    if (req.body.discount !== undefined) updates.discount = newDiscount;
-    if (req.body.taxRate !== undefined) updates.taxRate = newTaxRate;
+    if (req.body.discount !== undefined) updates.discount = req.body.discount;
+    if (req.body.taxRate !== undefined)
+      updates.taxRate = Math.max(0, parseFloat(req.body.taxRate) || 0);
+    if (req.body.subtotal !== undefined)
+      updates.subtotal = parseFloat(req.body.subtotal) || 0;
+    if (req.body.tax !== undefined) updates.tax = parseFloat(req.body.tax) || 0;
+    if (req.body.total !== undefined)
+      updates.total = parseFloat(req.body.total) || 0;
 
     if (req.body.items !== undefined) {
-      const sanitizedItems = sanitizeItems(req.body.items);
-      const { subtotal, tax, total } = calcTotals(
-        sanitizedItems,
-        newDiscount,
-        newTaxRate,
-      );
-      updates.items = sanitizedItems;
-      updates.subtotal = subtotal;
-      updates.tax = tax;
-      updates.total = total;
-    } else if (
-      req.body.discount !== undefined ||
-      req.body.taxRate !== undefined
-    ) {
-      // Recalculate with existing items but new discount/taxRate
-      const { subtotal, tax, total } = calcTotals(
-        current.items,
-        newDiscount,
-        newTaxRate,
-      );
-      updates.subtotal = subtotal;
-      updates.tax = tax;
-      updates.total = total;
+      updates.items = sanitizeItems(req.body.items);
     }
 
     if (req.body.currency)
