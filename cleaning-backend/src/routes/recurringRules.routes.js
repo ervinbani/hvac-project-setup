@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const {
+  getRecurringRule,
   listRecurringRules,
   createRecurringRule,
   updateRecurringRule,
@@ -16,6 +17,7 @@ const ADMIN_STAFF = [...ADMIN, "staff"];
 router.use(auth);
 
 router.get("/", listRecurringRules);
+router.get("/:id", getRecurringRule);
 router.post("/", requireRole(...ADMIN_STAFF), createRecurringRule);
 router.post("/:id/generate", requireRole(...ADMIN_STAFF), generateJobs);
 router.put("/:id", requireRole(...ADMIN_STAFF), updateRecurringRule);

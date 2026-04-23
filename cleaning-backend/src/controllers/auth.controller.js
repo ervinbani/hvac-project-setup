@@ -334,4 +334,58 @@ const me = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, me };
+// PUT /api/auth/me
+const updateMe = async (req, res, next) => {
+  try {
+    const { firstName, lastName, email, phone, preferredLanguage } = req.body;
+
+    const updates = {};
+    if (firstName !== undefined) updates.firstName = firstName.trim();
+    if (lastName !== undefined) updates.lastName = lastName.trim();
+    if (phone !== undefined) updates.phone = phone.trim();
+    if (preferredLanguage !== undefined) updates.preferredLanguage = preferredLanguage;
+
+    if (email !== undefined) {
+      const normalised = email.toLowerCase().trim();
+      const conflict = await User.findOne({
+        tenantId: req.user.tenantId,
+        email: normalised,
+        _id: { $ne: req.user.id },
+      });
+      if (conflict) {
+        return res.status(409).json({ success: false, error: "Email already in use" });
+      }
+      updates.email = normalised;
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updates },
+      { new: true, runValidators: true },
+    ).select("-passwordHash -__v");
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User not found" });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        roleId: user.roleId,
+        preferredLanguage: user.preferredLanguage,
+        phone: user.phone,
+        tenantId: user.tenantId,
+        isActive: user.isActive,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { register, login, me, updateMe };

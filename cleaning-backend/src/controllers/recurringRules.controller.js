@@ -114,6 +114,28 @@ const generateJobsForRule = async (rule, from, to) => {
 
 // ─── Controllers ──────────────────────────────────────────────────────────────
 
+// GET /api/recurring/:id
+const getRecurringRule = async (req, res, next) => {
+  try {
+    const rule = await RecurringRule.findOne({
+      _id: req.params.id,
+      tenantId: req.user.tenantId,
+    })
+      .populate("customerId", "firstName lastName email")
+      .populate("serviceId", "name basePrice");
+
+    if (!rule) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Recurring rule not found" });
+    }
+
+    res.json({ success: true, data: rule });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /api/recurring
 const listRecurringRules = async (req, res, next) => {
   try {
@@ -309,6 +331,7 @@ const deleteRecurringRule = async (req, res, next) => {
 };
 
 module.exports = {
+  getRecurringRule,
   listRecurringRules,
   createRecurringRule,
   updateRecurringRule,
