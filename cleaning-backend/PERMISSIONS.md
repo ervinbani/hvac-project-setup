@@ -67,6 +67,11 @@
 | POST /api/automations | ✗ | ✗ | ✅ | ✅ | ✅ | ✅ |
 | PUT /api/automations/:id | ✗ | ✗ | ✅ | ✅ | ✅ | ✅ |
 | DELETE /api/automations/:id | ✗ | ✗ | ✅ | ✅ | ✅ | ✅ |
+| **DOCUMENTS** | | | | | | |
+| GET /api/uploads/list | ✗ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| GET /api/uploads/presigned-read | ✗ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| GET /api/uploads/presigned-url | ✗ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| DELETE /api/uploads | ✗ | ✗ | ✗ | ✅ | ✅ | ✅ |
 
 ---
 

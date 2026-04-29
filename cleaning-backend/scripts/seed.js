@@ -184,6 +184,10 @@ async function seed() {
     { key: "roles.delete", entity: "roles", action: "delete" },
     { key: "permissions.read", entity: "permissions", action: "read" },
     { key: "permissions.update", entity: "permissions", action: "update" },
+    { key: "documents.create", entity: "documents", action: "create" },
+    { key: "documents.read", entity: "documents", action: "read" },
+    { key: "documents.update", entity: "documents", action: "update" },
+    { key: "documents.delete", entity: "documents", action: "delete" },
   ];
 
   await Promise.all(
@@ -232,6 +236,10 @@ async function seed() {
         "invoices.update",
         "roles.read",
         "permissions.read",
+        "documents.create",
+        "documents.read",
+        "documents.update",
+        "documents.delete",
       ]),
     },
     {
@@ -247,6 +255,10 @@ async function seed() {
         "services.read",
         "users.read",
         "invoices.read",
+        "documents.create",
+        "documents.read",
+        "documents.update",
+        "documents.delete",
       ]),
     },
     {
@@ -259,6 +271,8 @@ async function seed() {
         "users.read",
         "users.update",
         "users.delete",
+        "documents.create",
+        "documents.read",
       ]),
     },
     {
@@ -266,7 +280,7 @@ async function seed() {
       code: "staff",
       isSystemRole: true,
       isActive: true,
-      permissions: pids(["jobs.read", "services.read", "invoices.read"]),
+      permissions: pids(["jobs.read", "services.read", "invoices.read", "documents.create", "documents.read"]),
     },
     {
       name: "Worker",

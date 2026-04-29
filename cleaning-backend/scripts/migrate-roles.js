@@ -36,6 +36,10 @@ const PERMISSIONS_SEED = [
   { key: "roles.delete", entity: "roles", action: "delete" },
   { key: "permissions.read", entity: "permissions", action: "read" },
   { key: "permissions.update", entity: "permissions", action: "update" },
+  { key: "documents.create", entity: "documents", action: "create" },
+  { key: "documents.read", entity: "documents", action: "read" },
+  { key: "documents.update", entity: "documents", action: "update" },
+  { key: "documents.delete", entity: "documents", action: "delete" },
 ];
 
 async function ensureDefaultRoles(tenantId) {
@@ -84,6 +88,10 @@ async function ensureDefaultRoles(tenantId) {
         "invoices.update",
         "roles.read",
         "permissions.read",
+        "documents.create",
+        "documents.read",
+        "documents.update",
+        "documents.delete",
       ]),
     },
     {
@@ -99,6 +107,10 @@ async function ensureDefaultRoles(tenantId) {
         "services.read",
         "users.read",
         "invoices.read",
+        "documents.create",
+        "documents.read",
+        "documents.update",
+        "documents.delete",
       ]),
     },
     {
@@ -111,6 +123,8 @@ async function ensureDefaultRoles(tenantId) {
         "users.read",
         "users.update",
         "users.delete",
+        "documents.create",
+        "documents.read",
       ]),
     },
     {
@@ -118,7 +132,7 @@ async function ensureDefaultRoles(tenantId) {
       code: "staff",
       isSystemRole: true,
       isActive: true,
-      permissions: pids(["jobs.read", "services.read", "invoices.read"]),
+      permissions: pids(["jobs.read", "services.read", "invoices.read", "documents.create", "documents.read"]),
     },
     {
       name: "Worker",

@@ -12,7 +12,7 @@ const PermissionSchema = new mongoose.Schema(
     entity: {
       type: String,
       required: true,
-      enum: ['users', 'jobs', 'services', 'invoices', 'roles', 'permissions'],
+      enum: ['users', 'jobs', 'services', 'invoices', 'roles', 'permissions', 'documents'],
     },
     action: {
       type: String,
