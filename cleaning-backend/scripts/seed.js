@@ -184,6 +184,30 @@ async function seed() {
     { key: "roles.delete", entity: "roles", action: "delete" },
     { key: "permissions.read", entity: "permissions", action: "read" },
     { key: "permissions.update", entity: "permissions", action: "update" },
+    {
+      key: "documents.create",
+      entity: "documents",
+      action: "create",
+      description: "Upload files",
+    },
+    {
+      key: "documents.read",
+      entity: "documents",
+      action: "read",
+      description: "List and view files",
+    },
+    {
+      key: "documents.update",
+      entity: "documents",
+      action: "update",
+      description: "Update file metadata",
+    },
+    {
+      key: "documents.delete",
+      entity: "documents",
+      action: "delete",
+      description: "Delete files",
+    },
   ];
 
   await Promise.all(

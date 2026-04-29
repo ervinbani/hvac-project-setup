@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const PermissionSchema = new mongoose.Schema(
   {
@@ -12,25 +12,33 @@ const PermissionSchema = new mongoose.Schema(
     entity: {
       type: String,
       required: true,
-      enum: ['users', 'jobs', 'services', 'invoices', 'roles', 'permissions'],
+      enum: [
+        "users",
+        "jobs",
+        "services",
+        "invoices",
+        "roles",
+        "permissions",
+        "documents",
+      ],
     },
     action: {
       type: String,
       required: true,
-      enum: ['create', 'read', 'update', 'delete'],
+      enum: ["create", "read", "update", "delete"],
     },
     description: {
       type: String,
-      default: '',
+      default: "",
     },
     isActive: {
       type: Boolean,
       default: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 PermissionSchema.index({ entity: 1, action: 1 }, { unique: true });
 
-module.exports = mongoose.model('Permission', PermissionSchema);
+module.exports = mongoose.model("Permission", PermissionSchema);
