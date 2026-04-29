@@ -6,6 +6,7 @@ const {
   createJob,
   updateJob,
   updateJobStatus,
+  updateChecklistItem,
   deleteJob,
 } = require('../controllers/jobs.controller');
 const auth = require('../middleware/auth');
@@ -22,6 +23,7 @@ router.get('/:id', getJob);
 router.post('/', requireRole(...ADMIN_STAFF), createJob);
 router.put('/:id', requireRole(...ADMIN_STAFF), updateJob);
 router.patch('/:id/status', requireRole(...ALL_ROLES), updateJobStatus);
+router.patch('/:id/checklist/:itemId', requireRole(...ALL_ROLES), updateChecklistItem);
 router.delete('/:id', requireRole(...ADMIN), deleteJob);
 
 module.exports = router;

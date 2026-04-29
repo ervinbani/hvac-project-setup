@@ -1,5 +1,27 @@
 const Service = require("../models/Service");
 
+const VALID_UNITS = ["per_hour", "per_job", "per_day"];
+
+// Validates the overtime object provided by the user
+function validateOvertime(overtime) {
+  if (typeof overtime !== "object" || overtime === null) {
+    return "overtime must be an object";
+  }
+  if (overtime.isEnabled && overtime.extraPercentage == null) {
+    return "overtime.extraPercentage is required when overtime is enabled";
+  }
+  if (overtime.extraPercentage != null) {
+    const pct = Number(overtime.extraPercentage);
+    if (!Number.isFinite(pct) || pct < 0 || pct > 1000) {
+      return "overtime.extraPercentage must be a number between 0 and 1000";
+    }
+  }
+  if (overtime.unit != null && !VALID_UNITS.includes(overtime.unit)) {
+    return `overtime.unit must be one of: ${VALID_UNITS.join(", ")}`;
+  }
+  return null;
+}
+
 // GET /api/services
 const listServices = async (req, res, next) => {
   try {
@@ -39,6 +61,7 @@ const createService = async (req, res, next) => {
       durationMinutes,
       basePrice,
       priceUnit,
+      overtime,
       isActive,
     } = req.body;
 
@@ -50,6 +73,13 @@ const createService = async (req, res, next) => {
       });
     }
 
+    if (overtime !== undefined) {
+      const validationError = validateOvertime(overtime);
+      if (validationError) {
+        return res.status(400).json({ success: false, error: validationError });
+      }
+    }
+
     const service = await Service.create({
       tenantId: req.user.tenantId,
       name,
@@ -57,6 +87,7 @@ const createService = async (req, res, next) => {
       durationMinutes,
       basePrice,
       priceUnit,
+      overtime,
       isActive,
     });
 
@@ -75,12 +106,20 @@ const updateService = async (req, res, next) => {
       "durationMinutes",
       "basePrice",
       "priceUnit",
+      "overtime",
       "isActive",
     ];
     const updates = {};
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) {
         updates[field] = req.body[field];
+      }
+    }
+
+    if (updates.overtime !== undefined) {
+      const validationError = validateOvertime(updates.overtime);
+      if (validationError) {
+        return res.status(400).json({ success: false, error: validationError });
       }
     }
 
