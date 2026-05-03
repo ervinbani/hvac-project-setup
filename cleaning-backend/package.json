@@ -43,7 +43,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "4.1",
     "mongoose": "^8.0.0",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "resend": "^6.12.2"
   },
   "devDependencies": {
     "jest": "^30.3.0",

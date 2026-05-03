@@ -1,9 +1,14 @@
+const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Tenant = require("../models/Tenant");
 const User = require("../models/User");
 const Permission = require("../models/Permission");
 const Role = require("../models/Role");
+const {
+  sendWelcomeEmail,
+  sendResetPasswordEmail,
+} = require("../services/email.service");
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -214,6 +219,15 @@ const register = async (req, res, next) => {
 
     const token = generateToken(user);
 
+    // Send welcome email (non-blocking — non blocchiamo la risposta se fallisce)
+    sendWelcomeEmail({
+      to: user.email,
+      firstName: user.firstName,
+      tenantName: tenant.name,
+    }).catch((err) =>
+      console.error("[email] welcome email failed:", err.message),
+    );
+
     res.status(201).json({
       success: true,
       data: {
@@ -343,7 +357,8 @@ const updateMe = async (req, res, next) => {
     if (firstName !== undefined) updates.firstName = firstName.trim();
     if (lastName !== undefined) updates.lastName = lastName.trim();
     if (phone !== undefined) updates.phone = phone.trim();
-    if (preferredLanguage !== undefined) updates.preferredLanguage = preferredLanguage;
+    if (preferredLanguage !== undefined)
+      updates.preferredLanguage = preferredLanguage;
 
     if (email !== undefined) {
       const normalised = email.toLowerCase().trim();
@@ -353,7 +368,9 @@ const updateMe = async (req, res, next) => {
         _id: { $ne: req.user.id },
       });
       if (conflict) {
-        return res.status(409).json({ success: false, error: "Email already in use" });
+        return res
+          .status(409)
+          .json({ success: false, error: "Email already in use" });
       }
       updates.email = normalised;
     }
@@ -388,4 +405,109 @@ const updateMe = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, me, updateMe };
+module.exports = {
+  register,
+  login,
+  me,
+  updateMe,
+  forgotPassword,
+  resetPassword,
+};
+
+// POST /api/auth/forgot-password
+// Risponde sempre 200 per evitare user enumeration
+async function forgotPassword(req, res, next) {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Email is required" });
+    }
+
+    const user = await User.findOne({
+      email: email.toLowerCase(),
+      isActive: true,
+    });
+
+    // Se l'utente esiste, genera token e manda email
+    if (user) {
+      // Token raw (mandato nell'email)
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      // Hash del token (salvato nel DB)
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(rawToken)
+        .digest("hex");
+
+      user.resetPasswordToken = hashedToken;
+      user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 ora
+      await user.save();
+
+      sendResetPasswordEmail({
+        to: user.email,
+        firstName: user.firstName,
+        resetToken: rawToken,
+      }).catch((err) =>
+        console.error("[email] reset email failed:", err.message),
+      );
+    }
+
+    // Risposta identica sia che l'utente esista o no
+    res.json({
+      success: true,
+      data: { message: "If that email exists, a reset link has been sent." },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// POST /api/auth/reset-password
+async function resetPassword(req, res, next) {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Token and new password are required" });
+    }
+    if (newPassword.length < 8) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: "Password must be at least 8 characters",
+        });
+    }
+
+    // Hash del token ricevuto per confrontarlo con quello nel DB
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: new Date() }, // non scaduto
+      isActive: true,
+    });
+
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Token is invalid or has expired" });
+    }
+
+    // Aggiorna password e invalida il token
+    user.passwordHash = await bcrypt.hash(newPassword, 12);
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.json({
+      success: true,
+      data: { message: "Password updated successfully" },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
