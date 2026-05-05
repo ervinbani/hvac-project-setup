@@ -193,4 +193,8 @@ async function sendVerificationEmail({ to, firstName, verificationToken }) {
   });
 }
 
-module.exports = { sendWelcomeEmail, sendResetPasswordEmail, sendVerificationEmail };
+module.exports = {
+  sendWelcomeEmail,
+  sendResetPasswordEmail,
+  sendVerificationEmail,
+};

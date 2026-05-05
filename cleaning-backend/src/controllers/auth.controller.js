@@ -523,12 +523,10 @@ async function resetPassword(req, res, next) {
         .json({ success: false, error: "Token and new password are required" });
     }
     if (newPassword.length < 8) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: "Password must be at least 8 characters",
-        });
+      return res.status(400).json({
+        success: false,
+        error: "Password must be at least 8 characters",
+      });
     }
 
     // Hash del token ricevuto per confrontarlo con quello nel DB
