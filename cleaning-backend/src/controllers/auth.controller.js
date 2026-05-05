@@ -8,6 +8,7 @@ const Role = require("../models/Role");
 const {
   sendWelcomeEmail,
   sendResetPasswordEmail,
+  sendVerificationEmail,
 } = require("../services/email.service");
 
 const generateToken = (user) => {
@@ -207,6 +208,9 @@ const register = async (req, res, next) => {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+
     const user = await User.create({
       tenantId: tenant._id,
       firstName,
@@ -215,38 +219,75 @@ const register = async (req, res, next) => {
       passwordHash,
       role: "owner",
       roleId: ownerRole._id,
+      isActive: false,
+      emailVerified: false,
+      emailVerificationToken: verificationToken,
+      emailVerificationExpires: verificationExpires,
     });
 
-    const token = generateToken(user);
-
-    // Send welcome email (non-blocking — non blocchiamo la risposta se fallisce)
-    sendWelcomeEmail({
+    // Send verification email (non-blocking)
+    sendVerificationEmail({
       to: user.email,
       firstName: user.firstName,
-      tenantName: tenant.name,
+      verificationToken,
     }).catch((err) =>
-      console.error("[email] welcome email failed:", err.message),
+      console.error("[email] verification email failed:", err.message),
     );
 
     res.status(201).json({
       success: true,
       data: {
-        token,
-        user: {
-          id: user._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          role: user.role,
-          roleId: user.roleId,
-          tenantId: user.tenantId,
-        },
-        tenant: {
-          id: tenant._id,
-          name: tenant.name,
-          slug: tenant.slug,
-        },
+        message:
+          "Registration successful. Please check your email to verify your account before logging in.",
+        email: user.email,
       },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/auth/verify-email?token=...
+const verifyEmail = async (req, res, next) => {
+  try {
+    const { token } = req.query;
+    if (!token) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Verification token is required" });
+    }
+
+    const user = await User.findOne({
+      emailVerificationToken: token,
+      emailVerificationExpires: { $gt: new Date() },
+    }).populate("tenantId");
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid or expired verification token",
+      });
+    }
+
+    user.isActive = true;
+    user.emailVerified = true;
+    user.emailVerificationToken = null;
+    user.emailVerificationExpires = null;
+    await user.save();
+
+    // Send welcome email now that the account is activated
+    const tenantName = user.tenantId?.name || "";
+    sendWelcomeEmail({
+      to: user.email,
+      firstName: user.firstName,
+      tenantName,
+    }).catch((err) =>
+      console.error("[email] welcome email failed:", err.message),
+    );
+
+    res.json({
+      success: true,
+      data: { message: "Email verified successfully. You can now log in." },
     });
   } catch (err) {
     next(err);
@@ -278,10 +319,17 @@ const login = async (req, res, next) => {
 
     const user = await User.findOne({
       email: email.toLowerCase(),
-      isActive: true,
       ...tenantFilter,
     });
-    if (!user) {
+    if (!user || !user.isActive) {
+      // Give a more specific error if the account exists but email is unverified
+      if (user && !user.emailVerified) {
+        return res.status(403).json({
+          success: false,
+          error: "Please verify your email address before logging in.",
+          code: "EMAIL_NOT_VERIFIED",
+        });
+      }
       return res
         .status(401)
         .json({ success: false, error: "Invalid credentials" });
@@ -407,6 +455,7 @@ const updateMe = async (req, res, next) => {
 
 module.exports = {
   register,
+  verifyEmail,
   login,
   me,
   updateMe,

@@ -110,6 +110,37 @@ function resetPasswordHtml({ firstName, resetUrl }) {
   `);
 }
 
+// ─── Email: Verify Email ──────────────────────────────────────────────────────
+
+function verifyEmailHtml({ firstName, verifyUrl }) {
+  return baseLayout(`
+    <h1 style="margin:0 0 8px;font-size:24px;color:#1A1A1A;">Verify your email ✉️</h1>
+    <p style="margin:0 0 24px;font-size:15px;color:#6B6B6B;">Hi ${firstName}, thank you for signing up to Brillo! Please confirm your email address to activate your account. This link expires in <strong>24 hours</strong>.</p>
+
+    <div style="text-align:center;margin-bottom:28px;">
+      <a href="${verifyUrl}"
+         style="display:inline-block;background:linear-gradient(135deg,#00C9AA,#4A90D9);color:#FFFFFF;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;">
+        Verify my email →
+      </a>
+    </div>
+
+    <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:16px;">
+      <tr>
+        <td style="background:#F0FDF9;border-radius:10px;padding:16px;">
+          <p style="margin:0;font-size:13px;color:#00C9AA;">
+            ✅ Once verified, you can log in and start managing your cleaning business.
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0;font-size:12px;color:#9B9B9B;">
+      Or copy this link into your browser:<br/>
+      <span style="color:#00C9AA;word-break:break-all;">${verifyUrl}</span>
+    </p>
+  `);
+}
+
 // ─── Public send functions ────────────────────────────────────────────────────
 
 /**
@@ -145,4 +176,21 @@ async function sendResetPasswordEmail({ to, firstName, resetToken }) {
   });
 }
 
-module.exports = { sendWelcomeEmail, sendResetPasswordEmail };
+/**
+ * Send email verification link after registration.
+ * @param {Object} params
+ * @param {string} params.to              - recipient email
+ * @param {string} params.firstName       - user first name
+ * @param {string} params.verificationToken - raw token (goes in URL)
+ */
+async function sendVerificationEmail({ to, firstName, verificationToken }) {
+  const verifyUrl = `${FRONTEND_URL}/verify-email?token=${verificationToken}`;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Verify your Brillo email address",
+    html: verifyEmailHtml({ firstName, verifyUrl }),
+  });
+}
+
+module.exports = { sendWelcomeEmail, sendResetPasswordEmail, sendVerificationEmail };

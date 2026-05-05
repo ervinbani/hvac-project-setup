@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const {
   register,
+  verifyEmail,
   login,
   me,
   updateMe,
@@ -11,6 +12,7 @@ const {
 const auth = require("../middleware/auth");
 
 router.post("/register", register);
+router.get("/verify-email", verifyEmail);
 router.post("/login", login);
 router.get("/me", auth, me);
 router.put("/me", auth, updateMe);
