@@ -226,6 +226,7 @@ const register = async (req, res, next) => {
     });
 
     // Send verification email (non-blocking)
+    console.log("verificationToken>", verificationToken);
     sendVerificationEmail({
       to: user.email,
       firstName: user.firstName,
@@ -269,17 +270,21 @@ const verifyEmail = async (req, res, next) => {
       });
     }
 
-    user.isActive = true;
-    user.emailVerified = true;
-    user.emailVerificationToken = null;
-    user.emailVerificationExpires = null;
-    await user.save();
+    await User.updateOne(
+      { _id: user._id },
+      {
+        isActive: true,
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
+      },
+    );
 
     // Send welcome email now that the account is activated
     const tenantName = user.tenantId?.name || "";
     sendWelcomeEmail({
       to: user.email,
-      firstName: user.firstName,
+      firstName: user.firstName || "",
       tenantName,
     }).catch((err) =>
       console.error("[email] welcome email failed:", err.message),
@@ -410,6 +415,9 @@ const updateMe = async (req, res, next) => {
 
     if (email !== undefined) {
       const normalised = email.toLowerCase().trim();
+      const currentUser = await User.findById(req.user.id).select(
+        "email emailVerified",
+      );
       const conflict = await User.findOne({
         tenantId: req.user.tenantId,
         email: normalised,
@@ -420,7 +428,14 @@ const updateMe = async (req, res, next) => {
           .status(409)
           .json({ success: false, error: "Email already in use" });
       }
-      updates.email = normalised;
+      // Se l'email cambia, resetta verifica e disattiva l'account
+      if (currentUser && currentUser.email !== normalised) {
+        updates.email = normalised;
+        updates.emailVerified = false;
+        updates.isActive = false;
+        updates.emailVerificationToken = null;
+        updates.emailVerificationExpires = null;
+      }
     }
 
     const user = await User.findByIdAndUpdate(
@@ -489,13 +504,18 @@ async function forgotPassword(req, res, next) {
         .update(rawToken)
         .digest("hex");
 
-      user.resetPasswordToken = hashedToken;
-      user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 ora
-      await user.save();
+      // Usiamo updateOne per evitare validazione full-document su campi legacy
+      await User.updateOne(
+        { _id: user._id },
+        {
+          resetPasswordToken: hashedToken,
+          resetPasswordExpires: new Date(Date.now() + 60 * 60 * 1000),
+        },
+      );
 
       sendResetPasswordEmail({
         to: user.email,
-        firstName: user.firstName,
+        firstName: user.firstName || user.username || "",
         resetToken: rawToken,
       }).catch((err) =>
         console.error("[email] reset email failed:", err.message),
@@ -544,11 +564,16 @@ async function resetPassword(req, res, next) {
         .json({ success: false, error: "Token is invalid or has expired" });
     }
 
-    // Aggiorna password e invalida il token
-    user.passwordHash = await bcrypt.hash(newPassword, 12);
-    user.resetPasswordToken = null;
-    user.resetPasswordExpires = null;
-    await user.save();
+    // Aggiorna password e invalida il token (updateOne evita validazione full-document)
+    const newHash = await bcrypt.hash(newPassword, 12);
+    await User.updateOne(
+      { _id: user._id },
+      {
+        passwordHash: newHash,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+      },
+    );
 
     res.json({
       success: true,

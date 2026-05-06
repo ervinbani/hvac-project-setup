@@ -1,12 +1,10 @@
-# Email Verification Flow — Frontend Notes
+# Email Verification & User Activation — Frontend Notes
 
-## What changed on the backend
+---
 
-### 1. Registration (`POST /api/auth/register`)
+## 1. Registration (`POST /api/auth/register`)
 
-**Before:** responded with `{ token, user, tenant }` — the user was immediately active and logged in.
-
-**Now:** responds with:
+**Response (201):**
 
 ```json
 {
@@ -18,30 +16,27 @@
 }
 ```
 
-- **No JWT is returned anymore.**
-- An email with a verification link is sent automatically.
-- The user account is created with `isActive: false` until they verify.
-
-**Frontend action:** After successful registration, redirect the user to a "Check your email" page instead of logging them in.
+- **No JWT is returned.** Do not log the user in automatically.
+- Show a screen: _"Check your inbox — click the link in the email to activate your account."_
 
 ---
 
-### 2. New route — Verify Email (`GET /api/auth/verify-email?token=...`)
+## 2. Verify Email page (`/verify-email`)
 
-The email contains a link like:
+The email sent to the user contains a link like:
 
 ```
-https://your-frontend-url/verify-email?token=<TOKEN>
+http://localhost:5174/verify-email?token=<TOKEN>
 ```
 
-The frontend page at `/verify-email` must:
+The page must:
 
-1. Read the `token` query param from the URL.
-2. Call the backend:
+1. Read `token` from the URL query params.
+2. On mount, call:
    ```
    GET /api/auth/verify-email?token=<TOKEN>
    ```
-3. On **success** (`200`):
+3. **Success `200`:**
 
    ```json
    {
@@ -50,19 +45,21 @@ The frontend page at `/verify-email` must:
    }
    ```
 
-   → Show a success message and redirect to `/login`.
+   → Show success message, redirect to `/login` after 2–3 seconds.
 
-4. On **error** (`400`):
+4. **Error `400`:**
    ```json
    { "success": false, "error": "Invalid or expired verification token" }
    ```
-   → Show an error message. Optionally offer a "resend verification email" button (not yet implemented).
+   → Show error: _"Link non valido o scaduto."_ Token scade dopo **24 ore**.
 
 ---
 
-### 3. Login (`POST /api/auth/login`)
+## 3. Login (`POST /api/auth/login`)
 
-If the user tries to log in before verifying, the backend returns:
+If the user logs in before verifying their email:
+
+**Response `403`:**
 
 ```json
 {
@@ -72,20 +69,80 @@ If the user tries to log in before verifying, the backend returns:
 }
 ```
 
-HTTP status: **403**
+→ When `code === "EMAIL_NOT_VERIFIED"`, show a specific banner:
 
-**Frontend action:** When login returns `403` with `code: "EMAIL_NOT_VERIFIED"`, show a specific message like:
+> _"Devi verificare la tua email prima di accedere. Controlla la tua casella."_
 
-> "You need to verify your email before logging in. Check your inbox."
-
-This is separate from a generic wrong-password error (`401`).
+Questo è separato dall'errore `401` (credenziali sbagliate).
 
 ---
 
-## Summary of new frontend pages / logic needed
+## 4. Forgot Password (`POST /api/auth/forgot-password`)
 
-| What                     | Where                              | Notes                                                               |
-| ------------------------ | ---------------------------------- | ------------------------------------------------------------------- |
-| Post-registration screen | e.g. `/register-success` or inline | Show "Check your email" message                                     |
-| Verify email page        | `/verify-email`                    | Read `?token=`, call GET endpoint, redirect to login on success     |
-| Login error handling     | existing login form                | Distinguish `403 EMAIL_NOT_VERIFIED` from `401` invalid credentials |
+```json
+{ "email": "user@example.com" }
+```
+
+Risponde sempre `200` (anche se l'email non esiste, per sicurezza):
+
+```json
+{
+  "success": true,
+  "data": { "message": "If that email exists, a reset link has been sent." }
+}
+```
+
+→ Mostrare sempre: _"Se l'email è registrata, riceverai un link a breve."_
+
+---
+
+## 5. Reset Password (`POST /api/auth/reset-password`)
+
+Pagina `/reset-password?token=<TOKEN>` — form con "nuova password" e "conferma password".
+
+```json
+{ "token": "<TOKEN dall'URL>", "newPassword": "nuovaPassword123" }
+```
+
+- **Success `200`:** redirect a `/login`.
+- **Error `400`:** _"Link scaduto o non valido. Richiedi un nuovo reset."_ (token scade dopo **1 ora**)
+
+---
+
+## 6. Backoffice — Gestione utenti (`PUT /api/users/:id`)
+
+Nel pannello di gestione utenti, ogni user ha due nuovi campi: `isActive` e `emailVerified`.
+
+### Attiva / Disattiva utente
+
+```json
+{ "isActive": true }   // attiva
+{ "isActive": false }  // disattiva
+```
+
+→ Bottone toggle "Attivo / Inattivo" nella scheda utente.
+
+### Verifica email manualmente (bypass click email)
+
+```json
+{ "emailVerified": true }
+```
+
+→ Il backend imposta automaticamente anche `isActive: true` e pulisce il token.
+→ Bottone "Verifica email" visibile solo se `user.emailVerified === false`.
+
+### Cambio email
+
+- L'email **si può cambiare** in qualsiasi momento.
+- Se l'email cambia → il backend resetta `emailVerified: false` e `isActive: false` automaticamente.
+- Il frontend deve mostrare un avviso: _"Cambiando l'email, l'utente dovrà riverificarla."_
+
+---
+
+## Campi utente da mostrare nel backoffice
+
+| Campo           | Tipo    | Note UI                                           |
+| --------------- | ------- | ------------------------------------------------- |
+| `isActive`      | Boolean | Badge verde/rosso + toggle                        |
+| `emailVerified` | Boolean | Badge + bottone "Verifica manualmente" se `false` |
+| `email`         | String  | Mostrare warning se si modifica                   |

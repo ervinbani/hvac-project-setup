@@ -3,7 +3,7 @@ const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM = `${process.env.EMAIL_FROM_NAME || "Brillo"} <${process.env.EMAIL_FROM || "onboarding@resend.dev"}>`;
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5174";
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 // ─── Template helpers ─────────────────────────────────────────────────────────
 
