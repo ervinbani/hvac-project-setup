@@ -29,7 +29,11 @@ const userSchema = new mongoose.Schema(
       ref: "Role",
       default: null,
     },
-    preferredLanguage: { type: String, enum: ["en", "es", "it"], default: "en" },
+    preferredLanguage: {
+      type: String,
+      enum: ["en", "es", "it"],
+      default: "en",
+    },
     phone: String,
     isActive: { type: Boolean, default: false },
     emailVerified: { type: Boolean, default: false },

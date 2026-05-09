@@ -286,7 +286,12 @@ async function sendWelcomeEmail({ to, firstName, tenantName, lang = "en" }) {
  * @param {string} params.resetToken - raw reset token (goes in URL)
  * @param {string} [params.lang]     - language code: 'en' | 'es' | 'it'
  */
-async function sendResetPasswordEmail({ to, firstName, resetToken, lang = "en" }) {
+async function sendResetPasswordEmail({
+  to,
+  firstName,
+  resetToken,
+  lang = "en",
+}) {
   const resetUrl = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
   const t = resetPasswordCopy[lang] || resetPasswordCopy.en;
   await resend.emails.send({
@@ -305,7 +310,12 @@ async function sendResetPasswordEmail({ to, firstName, resetToken, lang = "en" }
  * @param {string} params.verificationToken - raw token (goes in URL)
  * @param {string} [params.lang]          - language code: 'en' | 'es' | 'it'
  */
-async function sendVerificationEmail({ to, firstName, verificationToken, lang = "en" }) {
+async function sendVerificationEmail({
+  to,
+  firstName,
+  verificationToken,
+  lang = "en",
+}) {
   const verifyUrl = `${FRONTEND_URL}/verify-email?token=${verificationToken}`;
   const t = verifyEmailCopy[lang] || verifyEmailCopy.en;
   await resend.emails.send({
