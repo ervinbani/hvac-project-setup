@@ -44,6 +44,7 @@
     "mongodb": "4.1",
     "mongoose": "^8.0.0",
     "morgan": "^1.10.0",
+    "pdfkit": "^0.18.0",
     "resend": "^6.12.2"
   },
   "devDependencies": {

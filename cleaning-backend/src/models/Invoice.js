@@ -77,6 +77,7 @@ const invoiceSchema = new mongoose.Schema(
     },
 
     paidAt: Date,
+    sentAt: Date,
     paymentMethod: {
       type: String,
       enum: ["cash", "card", "bank_transfer", "stripe", "paypal", "other"],

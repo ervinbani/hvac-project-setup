@@ -2,6 +2,8 @@ const Invoice = require("../models/Invoice");
 const Tenant = require("../models/Tenant");
 const Customer = require("../models/Customer");
 const Job = require("../models/Job");
+const { sendInvoiceEmail } = require("../services/email.service");
+const { generateInvoicePdf } = require("../services/pdf.service");
 
 const generateInvoiceNumber = async (tenantId) => {
   const tenant = await Tenant.findById(tenantId).select("slug");
@@ -280,11 +282,10 @@ const updateInvoice = async (req, res, next) => {
 // POST /api/invoices/:id/send
 const sendInvoice = async (req, res, next) => {
   try {
-    const invoice = await Invoice.findOneAndUpdate(
-      { _id: req.params.id, tenantId: req.user.tenantId },
-      { $set: { status: "sent" } },
-      { new: true },
-    );
+    const invoice = await Invoice.findOne({
+      _id: req.params.id,
+      tenantId: req.user.tenantId,
+    });
 
     if (!invoice) {
       return res
@@ -292,9 +293,60 @@ const sendInvoice = async (req, res, next) => {
         .json({ success: false, error: "Invoice not found" });
     }
 
+    if (invoice.status === "void") {
+      return res
+        .status(400)
+        .json({ success: false, error: "Cannot send a voided invoice" });
+    }
+
+    // Always fetch the customer for current email + lang (snapshot may be stale)
+    const customer = await Customer.findById(invoice.customerId).select(
+      "firstName lastName email preferredLanguage",
+    );
+
+    const overrideEmail =
+      typeof req.body.email === "string" ? req.body.email.trim() : "";
+    const overrideName =
+      typeof req.body.name === "string" ? req.body.name.trim() : "";
+
+    const recipientEmail =
+      overrideEmail ||
+      invoice.customerSnapshot?.email ||
+      customer?.email ||
+      "";
+
+    const customerName =
+      overrideName ||
+      invoice.customerSnapshot?.name ||
+      [customer?.firstName, customer?.lastName].filter(Boolean).join(" ") ||
+      "";
+
+    const lang = customer?.preferredLanguage || "en";
+
+    if (!recipientEmail) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "No email address found for this customer. Add an email to the customer profile or specify one in the request body.",
+      });
+    }
+
+    await sendInvoiceEmail({
+      to: recipientEmail,
+      customerName,
+      invoice: invoice.toObject(),
+      lang,
+    });
+
+    const updated = await Invoice.findOneAndUpdate(
+      { _id: invoice._id, tenantId: req.user.tenantId },
+      { $set: { status: "sent", sentAt: new Date() } },
+      { new: true },
+    );
+
     res.json({
       success: true,
-      data: { message: "Invoice marked as sent", invoice },
+      data: { message: "Invoice sent successfully", invoice: updated },
     });
   } catch (err) {
     next(err);
@@ -321,11 +373,50 @@ const deleteInvoice = async (req, res, next) => {
   }
 };
 
+// GET /api/invoices/:id/pdf
+const downloadInvoicePdf = async (req, res, next) => {
+  try {
+    const invoice = await Invoice.findOne({
+      _id: req.params.id,
+      tenantId: req.user.tenantId,
+    });
+
+    if (!invoice) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Invoice not found" });
+    }
+
+    let customerName = invoice.customerSnapshot?.name || "";
+    let lang = "en";
+
+    const customer = await Customer.findById(invoice.customerId).select(
+      "firstName lastName preferredLanguage",
+    );
+    if (customer) {
+      if (!customerName)
+        customerName = [customer.firstName, customer.lastName]
+          .filter(Boolean)
+          .join(" ");
+      lang = customer.preferredLanguage || "en";
+    }
+
+    const filename = `invoice-${invoice.invoiceNumber}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    generateInvoicePdf(invoice.toObject(), customerName, lang, res);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   listInvoices,
   getInvoice,
   createInvoice,
   updateInvoice,
   sendInvoice,
+  downloadInvoicePdf,
   deleteInvoice,
 };

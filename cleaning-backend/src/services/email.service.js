@@ -1,4 +1,5 @@
 const { Resend } = require("resend");
+const { generateInvoicePdfBuffer } = require("./pdf.service");
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -326,8 +327,238 @@ async function sendVerificationEmail({
   });
 }
 
+// ─── Email: Invoice ───────────────────────────────────────────────────────────
+
+const invoiceCopy = {
+  en: {
+    subject: (invoiceNumber) => `Invoice ${invoiceNumber} from Brillo`,
+    heading: (invoiceNumber) => `Invoice ${invoiceNumber}`,
+    greeting: (name) => `Hi ${name},`,
+    intro: "Please find your invoice details below.",
+    labelIssued: "Issued",
+    labelDue: "Due date",
+    labelNoDue: "No due date",
+    colDescription: "Description",
+    colQty: "Qty",
+    colUnit: "Unit price",
+    colTotal: "Total",
+    labelSubtotal: "Subtotal",
+    labelDiscount: "Discount",
+    labelTax: "Tax",
+    labelTotal: "Total due",
+    notesLabel: "Notes",
+    cta: "View Invoice",
+    ctaDownload: "Download PDF",
+    footer: "If you have any questions, feel free to reply to this email.",
+  },
+  es: {
+    subject: (invoiceNumber) => `Factura ${invoiceNumber} de Brillo`,
+    heading: (invoiceNumber) => `Factura ${invoiceNumber}`,
+    greeting: (name) => `Hola ${name},`,
+    intro: "A continuación encontrarás los detalles de tu factura.",
+    labelIssued: "Emitida",
+    labelDue: "Vencimiento",
+    labelNoDue: "Sin vencimiento",
+    colDescription: "Descripción",
+    colQty: "Cant.",
+    colUnit: "Precio unitario",
+    colTotal: "Total",
+    labelSubtotal: "Subtotal",
+    labelDiscount: "Descuento",
+    labelTax: "Impuesto",
+    labelTotal: "Total a pagar",
+    notesLabel: "Notas",
+    cta: "Ver factura",
+    ctaDownload: "Descargar PDF",
+    footer: "Si tienes alguna pregunta, responde a este correo.",
+  },
+  it: {
+    subject: (invoiceNumber) => `Fattura ${invoiceNumber} da Brillo`,
+    heading: (invoiceNumber) => `Fattura ${invoiceNumber}`,
+    greeting: (name) => `Ciao ${name},`,
+    intro: "Di seguito trovi i dettagli della tua fattura.",
+    labelIssued: "Emessa il",
+    labelDue: "Scadenza",
+    labelNoDue: "Nessuna scadenza",
+    colDescription: "Descrizione",
+    colQty: "Qtà",
+    colUnit: "Prezzo unitario",
+    colTotal: "Totale",
+    labelSubtotal: "Subtotale",
+    labelDiscount: "Sconto",
+    labelTax: "Tassa",
+    labelTotal: "Totale da pagare",
+    notesLabel: "Note",
+    cta: "Visualizza fattura",
+    ctaDownload: "Scarica PDF",
+    footer: "Per qualsiasi domanda, rispondi a questa email.",
+  },
+};
+
+function formatCurrency(amount, currency = "USD") {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amount || 0);
+}
+
+function formatDate(date, lang) {
+  if (!date) return "—";
+  const localeMap = { en: "en-US", es: "es-ES", it: "it-IT" };
+  return new Date(date).toLocaleDateString(localeMap[lang] || "en-US", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function invoiceHtml({ invoice, customerName, lang = "en" }) {
+  const t = invoiceCopy[lang] || invoiceCopy.en;
+  const cur = invoice.currency || "USD";
+
+  const itemRows = (invoice.items || [])
+    .map(
+      (item) => `
+      <tr>
+        <td style="padding:10px 8px;border-bottom:1px solid #E5E3DF;font-size:14px;color:#1A1A1A;">${item.description || ""}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #E5E3DF;font-size:14px;color:#1A1A1A;text-align:center;">${item.priceUnit === "no_price" ? "—" : item.quantity}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #E5E3DF;font-size:14px;color:#1A1A1A;text-align:right;">${item.priceUnit === "no_price" ? "—" : formatCurrency(item.unitPrice, cur)}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #E5E3DF;font-size:14px;font-weight:600;color:#1A1A1A;text-align:right;">${item.priceUnit === "no_price" ? "—" : formatCurrency(item.total, cur)}</td>
+      </tr>`,
+    )
+    .join("");
+
+  const discountRow =
+    invoice.discount && invoice.discount.amount > 0
+      ? `<tr>
+          <td colspan="2" style="padding:6px 0;font-size:14px;color:#6B6B6B;">${t.labelDiscount}</td>
+          <td style="padding:6px 0;font-size:14px;color:#E8602C;text-align:right;">-${formatCurrency(invoice.discount.amount, cur)}</td>
+        </tr>`
+      : "";
+
+  const taxRow =
+    invoice.taxRate > 0
+      ? `<tr>
+          <td colspan="2" style="padding:6px 0;font-size:14px;color:#6B6B6B;">${t.labelTax} (${invoice.taxRate}%)</td>
+          <td style="padding:6px 0;font-size:14px;color:#1A1A1A;text-align:right;">${formatCurrency(invoice.tax, cur)}</td>
+        </tr>`
+      : "";
+
+  const notesSection = invoice.notes
+    ? `<table cellpadding="0" cellspacing="0" style="width:100%;margin-top:24px;">
+        <tr>
+          <td style="background:#F7F6F2;border-radius:10px;padding:16px;">
+            <p style="margin:0 0 6px;font-size:12px;font-weight:600;color:#6B6B6B;text-transform:uppercase;">${t.notesLabel}</p>
+            <p style="margin:0;font-size:14px;color:#1A1A1A;">${invoice.notes}</p>
+          </td>
+        </tr>
+      </table>`
+    : "";
+
+  const invoiceUrl = `${FRONTEND_URL}/invoices/${invoice._id}`;
+
+  return baseLayout(
+    `
+    <p style="margin:0 0 4px;font-size:15px;color:#1A1A1A;font-weight:600;">${t.greeting(customerName)}</p>
+    <p style="margin:0 0 24px;font-size:14px;color:#6B6B6B;">${t.intro}</p>
+
+    <!-- Invoice header -->
+    <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:24px;">
+      <tr>
+        <td>
+          <h2 style="margin:0;font-size:22px;color:#1A1A1A;">${t.heading(invoice.invoiceNumber)}</h2>
+        </td>
+        <td style="text-align:right;vertical-align:top;">
+          <span style="display:inline-block;background:#E8F8F5;color:#00C9AA;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;text-transform:uppercase;">${invoice.status}</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding-top:8px;font-size:13px;color:#6B6B6B;">
+          ${t.labelIssued}: <strong>${formatDate(invoice.issuedDate, lang)}</strong>
+        </td>
+        <td style="padding-top:8px;font-size:13px;color:#6B6B6B;text-align:right;">
+          ${t.labelDue}: <strong>${invoice.dueDate ? formatDate(invoice.dueDate, lang) : t.labelNoDue}</strong>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Items table -->
+    <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      <thead>
+        <tr style="background:#F7F6F2;">
+          <th style="padding:10px 8px;text-align:left;font-size:12px;font-weight:600;color:#6B6B6B;text-transform:uppercase;">${t.colDescription}</th>
+          <th style="padding:10px 8px;text-align:center;font-size:12px;font-weight:600;color:#6B6B6B;text-transform:uppercase;">${t.colQty}</th>
+          <th style="padding:10px 8px;text-align:right;font-size:12px;font-weight:600;color:#6B6B6B;text-transform:uppercase;">${t.colUnit}</th>
+          <th style="padding:10px 8px;text-align:right;font-size:12px;font-weight:600;color:#6B6B6B;text-transform:uppercase;">${t.colTotal}</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemRows}
+      </tbody>
+    </table>
+
+    <!-- Totals -->
+    <table cellpadding="0" cellspacing="0" style="width:240px;margin-left:auto;margin-bottom:28px;">
+      <tr>
+        <td colspan="2" style="padding:6px 0;font-size:14px;color:#6B6B6B;">${t.labelSubtotal}</td>
+        <td style="padding:6px 0;font-size:14px;color:#1A1A1A;text-align:right;">${formatCurrency(invoice.subtotal, cur)}</td>
+      </tr>
+      ${discountRow}
+      ${taxRow}
+      <tr>
+        <td colspan="3" style="padding:4px 0;border-top:2px solid #1A1A1A;"></td>
+      </tr>
+      <tr>
+        <td colspan="2" style="padding:8px 0 0;font-size:16px;font-weight:700;color:#1A1A1A;">${t.labelTotal}</td>
+        <td style="padding:8px 0 0;font-size:16px;font-weight:700;color:#00C9AA;text-align:right;">${formatCurrency(invoice.total, cur)}</td>
+      </tr>
+    </table>
+
+    ${notesSection}
+
+    <!-- CTA -->
+    <div style="text-align:center;margin-top:28px;">
+      <a href="${invoiceUrl}"
+         style="display:inline-block;background:linear-gradient(135deg,#00C9AA,#4A90D9);color:#FFFFFF;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;">
+        ${t.cta}
+      </a>
+    </div>
+
+    <p style="margin:24px 0 0;font-size:13px;color:#9B9B9B;text-align:center;">${t.footer}</p>
+  `,
+    lang,
+  );
+}
+
+/**
+ * Send an invoice by email to the customer.
+ * @param {Object} params
+ * @param {string} params.to           - recipient email
+ * @param {string} params.customerName - full customer name
+ * @param {Object} params.invoice      - full invoice document (plain object)
+ * @param {string} [params.lang]       - language code: 'en' | 'es' | 'it'
+ */
+async function sendInvoiceEmail({ to, customerName, invoice, lang = "en" }) {
+  const t = invoiceCopy[lang] || invoiceCopy.en;
+  const pdfBuffer = await generateInvoicePdfBuffer(invoice, customerName, lang);
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: t.subject(invoice.invoiceNumber),
+    html: invoiceHtml({ invoice, customerName, lang }),
+    attachments: [
+      {
+        filename: `invoice-${invoice.invoiceNumber}.pdf`,
+        content: pdfBuffer,
+      },
+    ],
+  });
+}
+
 module.exports = {
   sendWelcomeEmail,
   sendResetPasswordEmail,
   sendVerificationEmail,
+  sendInvoiceEmail,
 };
