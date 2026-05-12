@@ -161,7 +161,7 @@ async function createDefaultRoles(tenantId) {
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/;
 const validatePassword = (password) => {
   if (!PASSWORD_REGEX.test(password)) {
-    return 'Password must be at least 8 characters and include an uppercase letter, a number, and a special character';
+    return "Password must be at least 8 characters and include an uppercase letter, a number, and a special character";
   }
   return null;
 };
