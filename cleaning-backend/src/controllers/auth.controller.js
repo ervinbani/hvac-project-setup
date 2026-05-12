@@ -158,6 +158,14 @@ async function createDefaultRoles(tenantId) {
   return ownerRole;
 }
 
+const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/;
+const validatePassword = (password) => {
+  if (!PASSWORD_REGEX.test(password)) {
+    return 'Password must be at least 8 characters and include an uppercase letter, a number, and a special character';
+  }
+  return null;
+};
+
 // POST /api/auth/register
 const register = async (req, res, next) => {
   try {
@@ -184,6 +192,11 @@ const register = async (req, res, next) => {
       return res
         .status(400)
         .json({ success: false, error: "Missing required fields" });
+    }
+
+    const pwError = validatePassword(password);
+    if (pwError) {
+      return res.status(400).json({ success: false, error: pwError });
     }
 
     // Check if slug is already taken
@@ -226,7 +239,6 @@ const register = async (req, res, next) => {
     });
 
     // Send verification email (non-blocking)
-    console.log("verificationToken>", verificationToken);
     sendVerificationEmail({
       to: user.email,
       firstName: user.firstName,
@@ -542,11 +554,9 @@ async function resetPassword(req, res, next) {
         .status(400)
         .json({ success: false, error: "Token and new password are required" });
     }
-    if (newPassword.length < 8) {
-      return res.status(400).json({
-        success: false,
-        error: "Password must be at least 8 characters",
-      });
+    const pwError = validatePassword(newPassword);
+    if (pwError) {
+      return res.status(400).json({ success: false, error: pwError });
     }
 
     // Hash del token ricevuto per confrontarlo con quello nel DB
