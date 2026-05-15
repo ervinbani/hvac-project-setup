@@ -95,6 +95,20 @@ const welcomeCopy = {
     ],
     cta: "Vai alla dashboard →",
   },
+  sq: {
+    subject: (firstName) => `Mirë se vini në Brillo, ${firstName}! 🧹`,
+    heading: (firstName) => `Mirë se vini në Brillo, ${firstName}! 👋`,
+    subtitle: (tenantName) =>
+      `Llogaria juaj për <strong>${tenantName}</strong> është gati. Filloni të menaxhoni biznesin tuaj të pastrimit më mençur.`,
+    listTitle: "✅ Çfarë mund të bëni tani:",
+    items: [
+      "Krijoni dhe planifikoni punët",
+      "Shtoni anëtarët e ekipit",
+      "Menaxhoni klientët dhe faturat",
+      "Konfiguroni oraret e pastrimit të përsëritura",
+    ],
+    cta: "Shko te Paneli →",
+  },
 };
 
 function welcomeHtml({ firstName, tenantName, lang = "en" }) {
@@ -158,6 +172,16 @@ const resetPasswordCopy = {
     warning:
       "⚠️ Se non hai richiesto questa operazione, puoi ignorare questa email. La tua password non verrà modificata.",
     orCopy: "Oppure copia questo link nel tuo browser:",
+  },
+  sq: {
+    subject: "Rivendos fjalëkalimin tënd të Brillo",
+    heading: "Rivendos fjalëkalimin 🔒",
+    body: (firstName) =>
+      `Përshëndetje ${firstName}, morëm një kërkesë për të rivendosur fjalëkalimin tuaj të Brillo. Kliko butonin — lidhja skadon pas <strong>1 ore</strong>.`,
+    cta: "Rivendos fjalëkalimin →",
+    warning:
+      "⚠️ Nëse nuk e kërkuat këtë, mund ta injoroni këtë email. Fjalëkalimi juaj nuk do të ndryshojë.",
+    orCopy: "Ose kopjoni këtë lidhje në shfletuesin tuaj:",
   },
 };
 
@@ -223,6 +247,15 @@ const verifyEmailCopy = {
     cta: "Verifica la mia email →",
     note: "✅ Una volta verificato, potrai accedere e iniziare a gestire la tua attività di pulizie.",
     orCopy: "Oppure copia questo link nel tuo browser:",
+  },
+  sq: {
+    subject: "Verifiko adresën tënde të emailit në Brillo",
+    heading: "Verifiko emailin tënd ✉️",
+    body: (firstName) =>
+      `Përshëndetje ${firstName}, faleminderit që u regjistruat në Brillo! Ju lutemi konfirmoni adresën tuaj të emailit për të aktivizuar llogarinë. Kjo lidhje skadon pas <strong>24 orësh</strong>.`,
+    cta: "Verifiko emailin tim →",
+    note: "✅ Pasi të verifikoni, mund të identifikoheni dhe të filloni menaxhimin e biznesit tuaj.",
+    orCopy: "Ose kopjoni këtë lidhje në shfletuesin tuaj:",
   },
 };
 
@@ -392,6 +425,27 @@ const invoiceCopy = {
     cta: "Visualizza fattura",
     ctaDownload: "Scarica PDF",
     footer: "Per qualsiasi domanda, rispondi a questa email.",
+  },
+  sq: {
+    subject: (invoiceNumber) => `Fatura ${invoiceNumber} nga Brillo`,
+    heading: (invoiceNumber) => `Fatura ${invoiceNumber}`,
+    greeting: (name) => `Përshëndetje ${name},`,
+    intro: "Më poshtë gjeni detajet e faturës suaj.",
+    labelIssued: "Lëshuar më",
+    labelDue: "Data e skadimit",
+    labelNoDue: "Pa datë skadimi",
+    colDescription: "Përshkrimi",
+    colQty: "Sasi",
+    colUnit: "Çmimi për njësi",
+    colTotal: "Totali",
+    labelSubtotal: "Nëntotali",
+    labelDiscount: "Zbritje",
+    labelTax: "Tatim",
+    labelTotal: "Totali për t'u paguar",
+    notesLabel: "Shënime",
+    cta: "Shiko faturën",
+    ctaDownload: "Shkarko PDF",
+    footer: "Nëse keni pyetje, mos hezitoni të na kontaktoni duke iu përgjigjur këtij emaili.",
   },
 };
 

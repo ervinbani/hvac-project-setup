@@ -26,7 +26,7 @@ const messageLogSchema = new mongoose.Schema(
       enum: ["outbound", "inbound"],
       required: true,
     },
-    language: { type: String, enum: ["en", "es", "it"], default: "en" },
+    language: { type: String, default: "en" },
     templateKey: String,
     subject: String,
     body: String,

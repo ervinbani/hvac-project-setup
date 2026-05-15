@@ -1,15 +1,24 @@
 const mongoose = require("mongoose");
+const { AVAILABLE_LANG_CODES } = require("../config/languages");
+
+const languageEntrySchema = new mongoose.Schema(
+  {
+    lang: { type: String, required: true, enum: AVAILABLE_LANG_CODES },
+    label: { type: String, required: true },
+    active: { type: Boolean, default: false },
+    isDefault: { type: Boolean, default: false },
+  },
+  { _id: false },
+);
 
 const tenantSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
     businessType: { type: String, default: "cleaning" },
-    defaultLanguage: { type: String, enum: ["en", "es", "it"], default: "en" },
-    supportedLanguages: {
-      type: [String],
-      enum: ["en", "es", "it"],
-      default: ["en", "es"],
+    languages: {
+      type: [languageEntrySchema],
+      default: [],
     },
     timezone: { type: String, default: "America/New_York" },
     contactEmail: String,

@@ -4,6 +4,8 @@ const {
   getTenant,
   updateTenant,
   deleteTenant,
+  getAvailableLanguages,
+  updateLanguages,
 } = require("../controllers/tenant.controller");
 const auth = require("../middleware/auth");
 const requireRole = require("../middleware/requireRole");
@@ -15,5 +17,9 @@ router.use(auth);
 router.get("/", getTenant);
 router.put("/", requireRole(...ADMIN), updateTenant);
 router.delete("/", requireRole("owner"), deleteTenant);
+
+// Language management
+router.get("/languages/available", getAvailableLanguages);
+router.put("/languages", requireRole("owner", "director"), updateLanguages);
 
 module.exports = router;

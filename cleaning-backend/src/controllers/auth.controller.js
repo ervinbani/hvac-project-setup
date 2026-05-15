@@ -5,6 +5,7 @@ const Tenant = require("../models/Tenant");
 const User = require("../models/User");
 const Permission = require("../models/Permission");
 const Role = require("../models/Role");
+const { DEFAULT_TENANT_LANGUAGES } = require("../config/languages");
 const {
   sendWelcomeEmail,
   sendResetPasswordEmail,
@@ -214,6 +215,7 @@ const register = async (req, res, next) => {
       contactEmail: contactEmail || email,
       contactPhone,
       timezone,
+      languages: DEFAULT_TENANT_LANGUAGES,
     });
 
     // Create default roles for new tenant and get owner role

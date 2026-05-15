@@ -1,5 +1,6 @@
 const bcrypt = require("bcryptjs");
 const Tenant = require("../models/Tenant");
+const { AVAILABLE_LANGUAGES, AVAILABLE_LANG_CODES } = require("../config/languages");
 const User = require("../models/User");
 const Role = require("../models/Role");
 const Customer = require("../models/Customer");
@@ -33,8 +34,6 @@ const updateTenant = async (req, res, next) => {
   try {
     const allowedFields = [
       "name",
-      "defaultLanguage",
-      "supportedLanguages",
       "timezone",
       "contactEmail",
       "contactPhone",
@@ -121,4 +120,74 @@ const deleteTenant = async (req, res, next) => {
   }
 };
 
-module.exports = { getTenant, updateTenant, deleteTenant };
+// GET /api/tenant/languages — list available system languages
+const getAvailableLanguages = async (req, res) => {
+  res.json({ success: true, data: AVAILABLE_LANGUAGES });
+};
+
+// PUT /api/tenant/languages — replace the tenant's languages array
+const updateLanguages = async (req, res, next) => {
+  try {
+    const { languages } = req.body;
+
+    if (!Array.isArray(languages) || languages.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, error: "languages must be a non-empty array" });
+    }
+
+    // Validate each entry
+    for (const entry of languages) {
+      if (!AVAILABLE_LANG_CODES.includes(entry.lang)) {
+        return res.status(400).json({
+          success: false,
+          error: `Unsupported language code: ${entry.lang}`,
+        });
+      }
+    }
+
+    // Exactly one isDefault must exist and it must be active
+    const defaults = languages.filter((l) => l.isDefault);
+    if (defaults.length !== 1) {
+      return res.status(400).json({
+        success: false,
+        error: "Exactly one language must be set as default",
+      });
+    }
+    if (!defaults[0].active) {
+      return res.status(400).json({
+        success: false,
+        error: "The default language must be active",
+      });
+    }
+
+    // Enrich each entry with the canonical label from the registry
+    const enriched = languages.map((entry) => {
+      const meta = AVAILABLE_LANGUAGES.find((l) => l.lang === entry.lang);
+      return {
+        lang: entry.lang,
+        label: meta ? meta.label : entry.label,
+        active: Boolean(entry.active),
+        isDefault: Boolean(entry.isDefault),
+      };
+    });
+
+    const tenant = await Tenant.findByIdAndUpdate(
+      req.user.tenantId,
+      { $set: { languages: enriched } },
+      { new: true, runValidators: true },
+    );
+
+    if (!tenant) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Tenant not found" });
+    }
+
+    res.json({ success: true, data: tenant.languages });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getTenant, updateTenant, deleteTenant, getAvailableLanguages, updateLanguages };

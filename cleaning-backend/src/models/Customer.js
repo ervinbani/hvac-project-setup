@@ -12,11 +12,7 @@ const customerSchema = new mongoose.Schema(
     lastName: { type: String, required: true },
     email: String,
     phone: String,
-    preferredLanguage: {
-      type: String,
-      enum: ["en", "es", "it"],
-      default: "en",
-    },
+    preferredLanguage: { type: String, default: "en" },
     address: {
       street: String,
       city: String,
