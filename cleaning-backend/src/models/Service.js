@@ -23,6 +23,20 @@ const serviceSchema = new mongoose.Schema(
       enum: ["per_hour", "per_job", "per_day"],
       default: "per_job",
     },
+    overtime: {
+      isEnabled: { type: Boolean, default: false },
+      unit: {
+        type: String,
+        enum: ["per_hour", "per_job", "per_day"],
+        default: "per_hour",
+      },
+      extraPercentage: {
+        type: Number,
+        min: 0,
+        max: 1000,
+        default: null,
+      },
+    },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true },

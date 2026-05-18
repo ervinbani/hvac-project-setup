@@ -63,6 +63,7 @@ const jobSchema = new mongoose.Schema(
       default: "per_job",
     },
     timeDuration: { type: Number, default: 0 },
+    overtimeHours: { type: Number, min: 0, default: null },
     invoiceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Invoice",

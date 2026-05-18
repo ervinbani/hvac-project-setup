@@ -1,4 +1,5 @@
 const express = require("express");
+const helmet = require("helmet");
 const cors = require("cors");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
@@ -21,6 +22,9 @@ const permissionsRoutes = require("./routes/permissions.routes");
 const uploadsRoutes = require("./routes/uploads.routes");
 
 const app = express();
+
+// Security headers
+app.use(helmet());
 
 // HIGH-3: Restrict CORS to known origins
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:3000")
@@ -50,7 +54,7 @@ if (process.env.NODE_ENV !== "test") {
 
 // HIGH-4: Rate limit auth endpoints (login + register)
 const authLimiter = rateLimit({
-  windowMs: 1 * 60 * 100, // 15 minutes
+  windowMs: 30 * 60 * 1000, // 30 minutes
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,

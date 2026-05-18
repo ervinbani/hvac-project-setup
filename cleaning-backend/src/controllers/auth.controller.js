@@ -1,9 +1,16 @@
+const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Tenant = require("../models/Tenant");
 const User = require("../models/User");
 const Permission = require("../models/Permission");
 const Role = require("../models/Role");
+const { DEFAULT_TENANT_LANGUAGES } = require("../config/languages");
+const {
+  sendWelcomeEmail,
+  sendResetPasswordEmail,
+  sendVerificationEmail,
+} = require("../services/email.service");
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -152,6 +159,14 @@ async function createDefaultRoles(tenantId) {
   return ownerRole;
 }
 
+const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/;
+const validatePassword = (password) => {
+  if (!PASSWORD_REGEX.test(password)) {
+    return "Password must be at least 8 characters and include an uppercase letter, a number, and a special character";
+  }
+  return null;
+};
+
 // POST /api/auth/register
 const register = async (req, res, next) => {
   try {
@@ -180,6 +195,11 @@ const register = async (req, res, next) => {
         .json({ success: false, error: "Missing required fields" });
     }
 
+    const pwError = validatePassword(password);
+    if (pwError) {
+      return res.status(400).json({ success: false, error: pwError });
+    }
+
     // Check if slug is already taken
     const existingTenant = await Tenant.findOne({ slug: slug.toLowerCase() });
     if (existingTenant) {
@@ -195,12 +215,16 @@ const register = async (req, res, next) => {
       contactEmail: contactEmail || email,
       contactPhone,
       timezone,
+      languages: DEFAULT_TENANT_LANGUAGES,
     });
 
     // Create default roles for new tenant and get owner role
     const ownerRole = await createDefaultRoles(tenant._id);
 
     const passwordHash = await bcrypt.hash(password, 12);
+
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
 
     const user = await User.create({
       tenantId: tenant._id,
@@ -210,29 +234,79 @@ const register = async (req, res, next) => {
       passwordHash,
       role: "owner",
       roleId: ownerRole._id,
+      isActive: false,
+      emailVerified: false,
+      emailVerificationToken: verificationToken,
+      emailVerificationExpires: verificationExpires,
     });
 
-    const token = generateToken(user);
+    // Send verification email (non-blocking)
+    sendVerificationEmail({
+      to: user.email,
+      firstName: user.firstName,
+      verificationToken,
+    }).catch((err) =>
+      console.error("[email] verification email failed:", err.message),
+    );
 
     res.status(201).json({
       success: true,
       data: {
-        token,
-        user: {
-          id: user._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          role: user.role,
-          roleId: user.roleId,
-          tenantId: user.tenantId,
-        },
-        tenant: {
-          id: tenant._id,
-          name: tenant.name,
-          slug: tenant.slug,
-        },
+        message:
+          "Registration successful. Please check your email to verify your account before logging in.",
+        email: user.email,
       },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/auth/verify-email?token=...
+const verifyEmail = async (req, res, next) => {
+  try {
+    const { token } = req.query;
+    if (!token) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Verification token is required" });
+    }
+
+    const user = await User.findOne({
+      emailVerificationToken: token,
+      emailVerificationExpires: { $gt: new Date() },
+    }).populate("tenantId");
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid or expired verification token",
+      });
+    }
+
+    await User.updateOne(
+      { _id: user._id },
+      {
+        isActive: true,
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
+      },
+    );
+
+    // Send welcome email now that the account is activated
+    const tenantName = user.tenantId?.name || "";
+    sendWelcomeEmail({
+      to: user.email,
+      firstName: user.firstName || "",
+      tenantName,
+    }).catch((err) =>
+      console.error("[email] welcome email failed:", err.message),
+    );
+
+    res.json({
+      success: true,
+      data: { message: "Email verified successfully. You can now log in." },
     });
   } catch (err) {
     next(err);
@@ -264,10 +338,17 @@ const login = async (req, res, next) => {
 
     const user = await User.findOne({
       email: email.toLowerCase(),
-      isActive: true,
       ...tenantFilter,
     });
-    if (!user) {
+    if (!user || !user.isActive) {
+      // Give a more specific error if the account exists but email is unverified
+      if (user && !user.emailVerified) {
+        return res.status(403).json({
+          success: false,
+          error: "Please verify your email address before logging in.",
+          code: "EMAIL_NOT_VERIFIED",
+        });
+      }
       return res
         .status(401)
         .json({ success: false, error: "Invalid credentials" });
@@ -343,19 +424,32 @@ const updateMe = async (req, res, next) => {
     if (firstName !== undefined) updates.firstName = firstName.trim();
     if (lastName !== undefined) updates.lastName = lastName.trim();
     if (phone !== undefined) updates.phone = phone.trim();
-    if (preferredLanguage !== undefined) updates.preferredLanguage = preferredLanguage;
+    if (preferredLanguage !== undefined)
+      updates.preferredLanguage = preferredLanguage;
 
     if (email !== undefined) {
       const normalised = email.toLowerCase().trim();
+      const currentUser = await User.findById(req.user.id).select(
+        "email emailVerified",
+      );
       const conflict = await User.findOne({
         tenantId: req.user.tenantId,
         email: normalised,
         _id: { $ne: req.user.id },
       });
       if (conflict) {
-        return res.status(409).json({ success: false, error: "Email already in use" });
+        return res
+          .status(409)
+          .json({ success: false, error: "Email already in use" });
       }
-      updates.email = normalised;
+      // Se l'email cambia, resetta verifica e disattiva l'account
+      if (currentUser && currentUser.email !== normalised) {
+        updates.email = normalised;
+        updates.emailVerified = false;
+        updates.isActive = false;
+        updates.emailVerificationToken = null;
+        updates.emailVerificationExpires = null;
+      }
     }
 
     const user = await User.findByIdAndUpdate(
@@ -388,4 +482,116 @@ const updateMe = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, me, updateMe };
+module.exports = {
+  register,
+  verifyEmail,
+  login,
+  me,
+  updateMe,
+  forgotPassword,
+  resetPassword,
+};
+
+// POST /api/auth/forgot-password
+// Risponde sempre 200 per evitare user enumeration
+async function forgotPassword(req, res, next) {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Email is required" });
+    }
+
+    const user = await User.findOne({
+      email: email.toLowerCase(),
+      isActive: true,
+    });
+
+    // Se l'utente esiste, genera token e manda email
+    if (user) {
+      // Token raw (mandato nell'email)
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      // Hash del token (salvato nel DB)
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(rawToken)
+        .digest("hex");
+
+      // Usiamo updateOne per evitare validazione full-document su campi legacy
+      await User.updateOne(
+        { _id: user._id },
+        {
+          resetPasswordToken: hashedToken,
+          resetPasswordExpires: new Date(Date.now() + 60 * 60 * 1000),
+        },
+      );
+
+      sendResetPasswordEmail({
+        to: user.email,
+        firstName: user.firstName || user.username || "",
+        resetToken: rawToken,
+      }).catch((err) =>
+        console.error("[email] reset email failed:", err.message),
+      );
+    }
+
+    // Risposta identica sia che l'utente esista o no
+    res.json({
+      success: true,
+      data: { message: "If that email exists, a reset link has been sent." },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// POST /api/auth/reset-password
+async function resetPassword(req, res, next) {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Token and new password are required" });
+    }
+    const pwError = validatePassword(newPassword);
+    if (pwError) {
+      return res.status(400).json({ success: false, error: pwError });
+    }
+
+    // Hash del token ricevuto per confrontarlo con quello nel DB
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: new Date() }, // non scaduto
+      isActive: true,
+    });
+
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Token is invalid or has expired" });
+    }
+
+    // Aggiorna password e invalida il token (updateOne evita validazione full-document)
+    const newHash = await bcrypt.hash(newPassword, 12);
+    await User.updateOne(
+      { _id: user._id },
+      {
+        passwordHash: newHash,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+      },
+    );
+
+    res.json({
+      success: true,
+      data: { message: "Password updated successfully" },
+    });
+  } catch (err) {
+    next(err);
+  }
+}

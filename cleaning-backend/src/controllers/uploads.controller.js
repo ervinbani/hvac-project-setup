@@ -40,10 +40,10 @@ const getPresignedUploadUrl = async (req, res) => {
   const tenantId = req.user.tenantId;
 
   // --- Validation ---
-  if (!resource || !refId || !filename || !contentType) {
+  if (!resource || !refId || !filename || !contentType || !fileSize) {
     return res.status(400).json({
       success: false,
-      error: "resource, refId, filename and contentType are required",
+      error: "resource, refId, filename, contentType and fileSize are required",
     });
   }
 
@@ -61,7 +61,7 @@ const getPresignedUploadUrl = async (req, res) => {
     });
   }
 
-  if (fileSize && parseInt(fileSize, 10) > MAX_FILE_SIZE) {
+  if (parseInt(fileSize, 10) > MAX_FILE_SIZE) {
     return res.status(400).json({
       success: false,
       error: `File exceeds maximum allowed size of ${MAX_FILE_SIZE / 1024 / 1024} MB`,

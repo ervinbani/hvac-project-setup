@@ -237,6 +237,14 @@ interface Customer {
 ### Service
 
 ```ts
+type PriceUnit = "per_hour" | "per_job" | "per_day";
+
+interface ServiceOvertime {
+  isEnabled: boolean; // whether overtime applies to this service
+  unit: PriceUnit; // same options as priceUnit
+  extraPercentage: number | null; // user-defined surcharge %, e.g. 10, 25, 50 (0–1000)
+}
+
 interface Service {
   _id: string;
   tenantId: string;
@@ -244,6 +252,8 @@ interface Service {
   description: { en?: string; es?: string };
   durationMinutes?: number;
   basePrice?: number;
+  priceUnit?: PriceUnit;
+  overtime?: ServiceOvertime;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -678,11 +688,39 @@ Shows all job fields. Status badge with color: `scheduled`=blue, `confirmed`=cya
 
 ### Invoice Detail
 
-Line-items table with subtotal / tax / total. "Send Invoice" button (calls `POST /invoices/:id/send`). Status badge with colors.
+Line-items table with subtotal / tax / total. "Send via email" button (calls `POST /invoices/:id/send`). Status badge with colors.
 
 ### Services Page
 
 List of services with bilingual name (en/es), price, duration, and active toggle. Create/edit form (owner/manager only).
+
+#### Overtime / Straordinario — new field (branch: `feature/service-overtime`)
+
+> **Note for frontend dev:** services now support an optional overtime configuration. The field is optional — if `overtime.isEnabled` is `false` or the field is absent, treat it as disabled and hide the sub-fields.
+
+**Model shape:**
+
+```json
+"overtime": {
+  "isEnabled": true,
+  "unit": "per_hour",        // one of: per_hour | per_job | per_day
+  "extraPercentage": 25     // user-entered number, 0–1000
+}
+```
+
+**UI — Create/Edit Service form (admin only):**
+
+- Add an **"Enable Overtime"** toggle/checkbox.
+- When enabled, show two additional fields:
+  1. **Unit** — same dropdown as `priceUnit` (`per_hour`, `per_job`, `per_day`)
+  2. **Extra Percentage** — numeric input, required when enabled (label: "Extra % on overtime", e.g. `25` → +25%)
+- When disabled, send `overtime.isEnabled: false` (or omit the field entirely).
+- Validation: `extraPercentage` is required and must be ≥ 0 when `isEnabled: true`.
+
+**UI — Service list / detail card:**
+
+- If `overtime.isEnabled` is `true`, show a small badge/tag **"OT +{extraPercentage}%"** next to the price (e.g. _$80/hr · OT +25%_).
+- If disabled or absent, show nothing extra.
 
 ### Recurring Rules Page
 

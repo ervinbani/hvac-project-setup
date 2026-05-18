@@ -4,8 +4,22 @@ const User = require("../models/User");
 // GET /api/users
 const listUsers = async (req, res, next) => {
   try {
-    const VALID_ROLES = ["owner", "director", "manager_operations", "manager_hr", "staff", "worker"];
-    const ROLE_HIERARCHY = { owner: 6, director: 5, manager_operations: 4, manager_hr: 4, staff: 2, worker: 1 };
+    const VALID_ROLES = [
+      "owner",
+      "director",
+      "manager_operations",
+      "manager_hr",
+      "staff",
+      "worker",
+    ];
+    const ROLE_HIERARCHY = {
+      owner: 6,
+      director: 5,
+      manager_operations: 4,
+      manager_hr: 4,
+      staff: 2,
+      worker: 1,
+    };
     const MAX_LIMIT = 100;
 
     const rawRole =
@@ -25,7 +39,11 @@ const listUsers = async (req, res, next) => {
 
     const filter = { tenantId: req.user.tenantId, role: { $in: visibleRoles } };
     // Allow further filtering by role only if it's within visible roles
-    if (rawRole && VALID_ROLES.includes(rawRole) && visibleRoles.includes(rawRole)) {
+    if (
+      rawRole &&
+      VALID_ROLES.includes(rawRole) &&
+      visibleRoles.includes(rawRole)
+    ) {
       filter.role = rawRole;
     }
     if (rawIsActive !== undefined) filter.isActive = rawIsActive === "true";
@@ -54,8 +72,22 @@ const listUsers = async (req, res, next) => {
 // POST /api/users
 const createUser = async (req, res, next) => {
   try {
-    const VALID_ROLES = ["owner", "director", "manager_operations", "manager_hr", "staff", "worker"];
-    const ROLE_HIERARCHY = { owner: 6, director: 5, manager_operations: 4, manager_hr: 4, staff: 2, worker: 1 };
+    const VALID_ROLES = [
+      "owner",
+      "director",
+      "manager_operations",
+      "manager_hr",
+      "staff",
+      "worker",
+    ];
+    const ROLE_HIERARCHY = {
+      owner: 6,
+      director: 5,
+      manager_operations: 4,
+      manager_hr: 4,
+      staff: 2,
+      worker: 1,
+    };
 
     const {
       firstName,
@@ -74,12 +106,10 @@ const createUser = async (req, res, next) => {
     }
 
     if (!VALID_ROLES.includes(role)) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: `Invalid role. Must be one of: ${VALID_ROLES.join(", ")}`,
-        });
+      return res.status(400).json({
+        success: false,
+        error: `Invalid role. Must be one of: ${VALID_ROLES.join(", ")}`,
+      });
     }
 
     // Prevent creating a user with equal or higher role than yourself (only owner can create owner)
@@ -87,13 +117,11 @@ const createUser = async (req, res, next) => {
       ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[req.user.role] &&
       req.user.role !== "owner"
     ) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          error:
-            "You cannot create a user with a role equal to or higher than your own",
-        });
+      return res.status(403).json({
+        success: false,
+        error:
+          "You cannot create a user with a role equal to or higher than your own",
+      });
     }
 
     const existing = await User.findOne({
@@ -117,6 +145,8 @@ const createUser = async (req, res, next) => {
       role,
       phone,
       preferredLanguage,
+      isActive: false,
+      emailVerified: false,
     });
 
     const { passwordHash: _, ...userData } = user.toObject();
@@ -130,8 +160,22 @@ const createUser = async (req, res, next) => {
 // PUT /api/users/:id
 const updateUser = async (req, res, next) => {
   try {
-    const VALID_ROLES = ["owner", "director", "manager_operations", "manager_hr", "staff", "worker"];
-    const ROLE_HIERARCHY = { owner: 6, director: 5, manager_operations: 4, manager_hr: 4, staff: 2, worker: 1 };
+    const VALID_ROLES = [
+      "owner",
+      "director",
+      "manager_operations",
+      "manager_hr",
+      "staff",
+      "worker",
+    ];
+    const ROLE_HIERARCHY = {
+      owner: 6,
+      director: 5,
+      manager_operations: 4,
+      manager_hr: 4,
+      staff: 2,
+      worker: 1,
+    };
 
     const allowedFields = [
       "firstName",
@@ -139,6 +183,8 @@ const updateUser = async (req, res, next) => {
       "role",
       "phone",
       "preferredLanguage",
+      "isActive",
+      "emailVerified",
     ];
     const updates = {};
 
@@ -148,33 +194,52 @@ const updateUser = async (req, res, next) => {
       }
     }
 
+    // Se l'admin attiva manualmente la verifica email, attiva anche l'account
+    if (updates.emailVerified === true) {
+      updates.isActive = true;
+      updates.emailVerificationToken = null;
+      updates.emailVerificationExpires = null;
+    }
+
     // Validate and guard role changes
     if (updates.role) {
       if (!VALID_ROLES.includes(updates.role)) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            error: `Invalid role. Must be one of: ${VALID_ROLES.join(", ")}`,
-          });
+        return res.status(400).json({
+          success: false,
+          error: `Invalid role. Must be one of: ${VALID_ROLES.join(", ")}`,
+        });
       }
       // Non-owners cannot elevate a user to a role >= their own
       if (
         ROLE_HIERARCHY[updates.role] >= ROLE_HIERARCHY[req.user.role] &&
         req.user.role !== "owner"
       ) {
-        return res
-          .status(403)
-          .json({
-            success: false,
-            error: "You cannot assign a role equal to or higher than your own",
-          });
+        return res.status(403).json({
+          success: false,
+          error: "You cannot assign a role equal to or higher than your own",
+        });
       }
     }
 
     // Allow password update
     if (req.body.password) {
       updates.passwordHash = await bcrypt.hash(req.body.password, 12);
+    }
+
+    // Se l'email viene cambiata, resetta la verifica e disattiva l'account
+    if (req.body.email !== undefined) {
+      const normalised = req.body.email.toLowerCase().trim();
+      const target = await User.findOne({
+        _id: req.params.id,
+        tenantId: req.user.tenantId,
+      });
+      if (target && target.email !== normalised) {
+        updates.email = normalised;
+        updates.emailVerified = false;
+        updates.isActive = false;
+        updates.emailVerificationToken = null;
+        updates.emailVerificationExpires = null;
+      }
     }
 
     const user = await User.findOneAndUpdate(
@@ -222,7 +287,14 @@ const deleteUser = async (req, res, next) => {
 // GET /api/users/:id
 const getUser = async (req, res, next) => {
   try {
-    const ROLE_HIERARCHY = { owner: 6, director: 5, manager_operations: 4, manager_hr: 4, staff: 2, worker: 1 };
+    const ROLE_HIERARCHY = {
+      owner: 6,
+      director: 5,
+      manager_operations: 4,
+      manager_hr: 4,
+      staff: 2,
+      worker: 1,
+    };
 
     const user = await User.findOne({
       _id: req.params.id,

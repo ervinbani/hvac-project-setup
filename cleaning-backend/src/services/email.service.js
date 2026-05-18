@@ -1,0 +1,619 @@
+const { Resend } = require("resend");
+const { generateInvoicePdfBuffer } = require("./pdf.service");
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const FROM = `${process.env.EMAIL_FROM_NAME || "Brillo"} <${process.env.EMAIL_FROM || "onboarding@resend.dev"}>`;
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+
+// ─── Template helpers ─────────────────────────────────────────────────────────
+
+function baseLayout(content, lang = "en") {
+  return `
+<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brillo</title>
+</head>
+<body style="margin:0;padding:0;background:#F7F6F2;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F7F6F2;padding:40px 0;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#00C9AA,#4A90D9);padding:32px 40px;text-align:center;">
+            <span style="font-size:28px;">🧹</span>
+            <span style="display:inline-block;font-size:24px;font-weight:700;color:#FFFFFF;margin-left:10px;vertical-align:middle;">Brillo</span>
+          </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+          <td style="padding:40px;">
+            ${content}
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr>
+          <td style="padding:24px 40px;border-top:1px solid #E5E3DF;text-align:center;">
+            <p style="margin:0;font-size:12px;color:#9B9B9B;">
+              © ${new Date().getFullYear()} Brillo · Cleaning Business Management<br/>
+              <a href="${FRONTEND_URL}" style="color:#00C9AA;text-decoration:none;">app.brilloclean.com</a>
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+// ─── Email: Welcome (dopo registrazione) ─────────────────────────────────────
+
+const welcomeCopy = {
+  en: {
+    subject: (firstName) => `Welcome to Brillo, ${firstName}! 🧹`,
+    heading: (firstName) => `Welcome to Brillo, ${firstName}! 👋`,
+    subtitle: (tenantName) =>
+      `Your account for <strong>${tenantName}</strong> is ready. Start managing your cleaning business smarter.`,
+    listTitle: "✅ What you can do now:",
+    items: [
+      "Create and schedule jobs",
+      "Add your team members",
+      "Manage customers and invoices",
+      "Set up recurring cleaning schedules",
+    ],
+    cta: "Go to Dashboard →",
+  },
+  es: {
+    subject: (firstName) => `¡Bienvenido a Brillo, ${firstName}! 🧹`,
+    heading: (firstName) => `¡Bienvenido a Brillo, ${firstName}! 👋`,
+    subtitle: (tenantName) =>
+      `Tu cuenta para <strong>${tenantName}</strong> está lista. Empieza a gestionar tu negocio de limpieza de forma más inteligente.`,
+    listTitle: "✅ Lo que puedes hacer ahora:",
+    items: [
+      "Crear y programar trabajos",
+      "Añadir a tus compañeros de equipo",
+      "Gestionar clientes y facturas",
+      "Configurar horarios de limpieza recurrentes",
+    ],
+    cta: "Ir al panel →",
+  },
+  it: {
+    subject: (firstName) => `Benvenuto su Brillo, ${firstName}! 🧹`,
+    heading: (firstName) => `Benvenuto su Brillo, ${firstName}! 👋`,
+    subtitle: (tenantName) =>
+      `Il tuo account per <strong>${tenantName}</strong> è pronto. Inizia a gestire la tua attività di pulizie in modo più intelligente.`,
+    listTitle: "✅ Cosa puoi fare adesso:",
+    items: [
+      "Crea e programma i lavori",
+      "Aggiungi i membri del tuo team",
+      "Gestisci clienti e fatture",
+      "Configura i programmi di pulizia ricorrenti",
+    ],
+    cta: "Vai alla dashboard →",
+  },
+  sq: {
+    subject: (firstName) => `Mirë se vini në Brillo, ${firstName}! 🧹`,
+    heading: (firstName) => `Mirë se vini në Brillo, ${firstName}! 👋`,
+    subtitle: (tenantName) =>
+      `Llogaria juaj për <strong>${tenantName}</strong> është gati. Filloni të menaxhoni biznesin tuaj të pastrimit më mençur.`,
+    listTitle: "✅ Çfarë mund të bëni tani:",
+    items: [
+      "Krijoni dhe planifikoni punët",
+      "Shtoni anëtarët e ekipit",
+      "Menaxhoni klientët dhe faturat",
+      "Konfiguroni oraret e pastrimit të përsëritura",
+    ],
+    cta: "Shko te Paneli →",
+  },
+};
+
+function welcomeHtml({ firstName, tenantName, lang = "en" }) {
+  const t = welcomeCopy[lang] || welcomeCopy.en;
+  return baseLayout(
+    `
+    <h1 style="margin:0 0 8px;font-size:24px;color:#1A1A1A;">${t.heading(firstName)}</h1>
+    <p style="margin:0 0 24px;font-size:15px;color:#6B6B6B;">${t.subtitle(tenantName)}</p>
+
+    <table cellpadding="0" cellspacing="0" style="margin-bottom:28px;width:100%;">
+      <tr>
+        <td style="background:#F7F6F2;border-radius:12px;padding:20px;">
+          <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#6B6B6B;">${t.listTitle}</p>
+          <ul style="margin:0;padding-left:20px;font-size:14px;color:#1A1A1A;line-height:1.8;">
+            ${t.items.map((item) => `<li>${item}</li>`).join("\n            ")}
+          </ul>
+        </td>
+      </tr>
+    </table>
+
+    <div style="text-align:center;">
+      <a href="${FRONTEND_URL}/dashboard"
+         style="display:inline-block;background:linear-gradient(135deg,#00C9AA,#4A90D9);color:#FFFFFF;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;">
+        ${t.cta}
+      </a>
+    </div>
+  `,
+    lang,
+  );
+}
+
+// ─── Email: Reset Password ────────────────────────────────────────────────────
+
+const resetPasswordCopy = {
+  en: {
+    subject: "Reset your Brillo password",
+    heading: "Reset your password 🔒",
+    body: (firstName) =>
+      `Hi ${firstName}, we received a request to reset your Brillo password. Click the button below — the link expires in <strong>1 hour</strong>.`,
+    cta: "Reset Password →",
+    warning:
+      "⚠️ If you didn't request this, you can safely ignore this email. Your password will not change.",
+    orCopy: "Or copy this link into your browser:",
+  },
+  es: {
+    subject: "Restablece tu contraseña de Brillo",
+    heading: "Restablece tu contraseña 🔒",
+    body: (firstName) =>
+      `Hola ${firstName}, recibimos una solicitud para restablecer tu contraseña de Brillo. Haz clic en el botón — el enlace expira en <strong>1 hora</strong>.`,
+    cta: "Restablecer contraseña →",
+    warning:
+      "⚠️ Si no solicitaste esto, puedes ignorar este correo. Tu contraseña no cambiará.",
+    orCopy: "O copia este enlace en tu navegador:",
+  },
+  it: {
+    subject: "Reimposta la tua password di Brillo",
+    heading: "Reimposta la tua password 🔒",
+    body: (firstName) =>
+      `Ciao ${firstName}, abbiamo ricevuto una richiesta di reimpostazione della password di Brillo. Clicca il pulsante qui sotto — il link scade tra <strong>1 ora</strong>.`,
+    cta: "Reimposta password →",
+    warning:
+      "⚠️ Se non hai richiesto questa operazione, puoi ignorare questa email. La tua password non verrà modificata.",
+    orCopy: "Oppure copia questo link nel tuo browser:",
+  },
+  sq: {
+    subject: "Rivendos fjalëkalimin tënd të Brillo",
+    heading: "Rivendos fjalëkalimin 🔒",
+    body: (firstName) =>
+      `Përshëndetje ${firstName}, morëm një kërkesë për të rivendosur fjalëkalimin tuaj të Brillo. Kliko butonin — lidhja skadon pas <strong>1 ore</strong>.`,
+    cta: "Rivendos fjalëkalimin →",
+    warning:
+      "⚠️ Nëse nuk e kërkuat këtë, mund ta injoroni këtë email. Fjalëkalimi juaj nuk do të ndryshojë.",
+    orCopy: "Ose kopjoni këtë lidhje në shfletuesin tuaj:",
+  },
+};
+
+function resetPasswordHtml({ firstName, resetUrl, lang = "en" }) {
+  const t = resetPasswordCopy[lang] || resetPasswordCopy.en;
+  return baseLayout(
+    `
+    <h1 style="margin:0 0 8px;font-size:24px;color:#1A1A1A;">${t.heading}</h1>
+    <p style="margin:0 0 24px;font-size:15px;color:#6B6B6B;">${t.body(firstName)}</p>
+
+    <div style="text-align:center;margin-bottom:28px;">
+      <a href="${resetUrl}"
+         style="display:inline-block;background:linear-gradient(135deg,#00C9AA,#4A90D9);color:#FFFFFF;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;">
+        ${t.cta}
+      </a>
+    </div>
+
+    <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:16px;">
+      <tr>
+        <td style="background:#FDF0EB;border-radius:10px;padding:16px;">
+          <p style="margin:0;font-size:13px;color:#E8602C;">
+            ${t.warning}
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0;font-size:12px;color:#9B9B9B;">
+      ${t.orCopy}<br/>
+      <span style="color:#00C9AA;word-break:break-all;">${resetUrl}</span>
+    </p>
+  `,
+    lang,
+  );
+}
+
+// ─── Email: Verify Email ──────────────────────────────────────────────────────
+
+const verifyEmailCopy = {
+  en: {
+    subject: "Verify your Brillo email address",
+    heading: "Verify your email ✉️",
+    body: (firstName) =>
+      `Hi ${firstName}, thank you for signing up to Brillo! Please confirm your email address to activate your account. This link expires in <strong>24 hours</strong>.`,
+    cta: "Verify my email →",
+    note: "✅ Once verified, you can log in and start managing your cleaning business.",
+    orCopy: "Or copy this link into your browser:",
+  },
+  es: {
+    subject: "Verifica tu dirección de correo de Brillo",
+    heading: "Verifica tu correo ✉️",
+    body: (firstName) =>
+      `Hola ${firstName}, ¡gracias por registrarte en Brillo! Por favor confirma tu dirección de correo para activar tu cuenta. Este enlace expira en <strong>24 horas</strong>.`,
+    cta: "Verificar mi correo →",
+    note: "✅ Una vez verificado, podrás iniciar sesión y comenzar a gestionar tu negocio.",
+    orCopy: "O copia este enlace en tu navegador:",
+  },
+  it: {
+    subject: "Verifica il tuo indirizzo email di Brillo",
+    heading: "Verifica la tua email ✉️",
+    body: (firstName) =>
+      `Ciao ${firstName}, grazie per esserti registrato su Brillo! Conferma il tuo indirizzo email per attivare l'account. Il link scade tra <strong>24 ore</strong>.`,
+    cta: "Verifica la mia email →",
+    note: "✅ Una volta verificato, potrai accedere e iniziare a gestire la tua attività di pulizie.",
+    orCopy: "Oppure copia questo link nel tuo browser:",
+  },
+  sq: {
+    subject: "Verifiko adresën tënde të emailit në Brillo",
+    heading: "Verifiko emailin tënd ✉️",
+    body: (firstName) =>
+      `Përshëndetje ${firstName}, faleminderit që u regjistruat në Brillo! Ju lutemi konfirmoni adresën tuaj të emailit për të aktivizuar llogarinë. Kjo lidhje skadon pas <strong>24 orësh</strong>.`,
+    cta: "Verifiko emailin tim →",
+    note: "✅ Pasi të verifikoni, mund të identifikoheni dhe të filloni menaxhimin e biznesit tuaj.",
+    orCopy: "Ose kopjoni këtë lidhje në shfletuesin tuaj:",
+  },
+};
+
+function verifyEmailHtml({ firstName, verifyUrl, lang = "en" }) {
+  const t = verifyEmailCopy[lang] || verifyEmailCopy.en;
+  return baseLayout(
+    `
+    <h1 style="margin:0 0 8px;font-size:24px;color:#1A1A1A;">${t.heading}</h1>
+    <p style="margin:0 0 24px;font-size:15px;color:#6B6B6B;">${t.body(firstName)}</p>
+
+    <div style="text-align:center;margin-bottom:28px;">
+      <a href="${verifyUrl}"
+         style="display:inline-block;background:linear-gradient(135deg,#00C9AA,#4A90D9);color:#FFFFFF;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;">
+        ${t.cta}
+      </a>
+    </div>
+
+    <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:16px;">
+      <tr>
+        <td style="background:#F0FDF9;border-radius:10px;padding:16px;">
+          <p style="margin:0;font-size:13px;color:#00C9AA;">
+            ${t.note}
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0;font-size:12px;color:#9B9B9B;">
+      ${t.orCopy}<br/>
+      <span style="color:#00C9AA;word-break:break-all;">${verifyUrl}</span>
+    </p>
+  `,
+    lang,
+  );
+}
+
+// ─── Public send functions ────────────────────────────────────────────────────
+
+/**
+ * Send welcome email after registration.
+ * @param {Object} params
+ * @param {string} params.to        - recipient email
+ * @param {string} params.firstName - user first name
+ * @param {string} params.tenantName - business name
+ * @param {string} [params.lang]    - language code: 'en' | 'es' | 'it'
+ */
+async function sendWelcomeEmail({ to, firstName, tenantName, lang = "en" }) {
+  const t = welcomeCopy[lang] || welcomeCopy.en;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: t.subject(firstName),
+    html: welcomeHtml({ firstName, tenantName, lang }),
+  });
+}
+
+/**
+ * Send password reset email.
+ * @param {Object} params
+ * @param {string} params.to         - recipient email
+ * @param {string} params.firstName  - user first name
+ * @param {string} params.resetToken - raw reset token (goes in URL)
+ * @param {string} [params.lang]     - language code: 'en' | 'es' | 'it'
+ */
+async function sendResetPasswordEmail({
+  to,
+  firstName,
+  resetToken,
+  lang = "en",
+}) {
+  const resetUrl = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
+  const t = resetPasswordCopy[lang] || resetPasswordCopy.en;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: t.subject,
+    html: resetPasswordHtml({ firstName, resetUrl, lang }),
+  });
+}
+
+/**
+ * Send email verification link after registration.
+ * @param {Object} params
+ * @param {string} params.to              - recipient email
+ * @param {string} params.firstName       - user first name
+ * @param {string} params.verificationToken - raw token (goes in URL)
+ * @param {string} [params.lang]          - language code: 'en' | 'es' | 'it'
+ */
+async function sendVerificationEmail({
+  to,
+  firstName,
+  verificationToken,
+  lang = "en",
+}) {
+  const verifyUrl = `${FRONTEND_URL}/verify-email?token=${verificationToken}`;
+  const t = verifyEmailCopy[lang] || verifyEmailCopy.en;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: t.subject,
+    html: verifyEmailHtml({ firstName, verifyUrl, lang }),
+  });
+}
+
+// ─── Email: Invoice ───────────────────────────────────────────────────────────
+
+const invoiceCopy = {
+  en: {
+    subject: (invoiceNumber) => `Invoice ${invoiceNumber} from Brillo`,
+    heading: (invoiceNumber) => `Invoice ${invoiceNumber}`,
+    greeting: (name) => `Hi ${name},`,
+    intro: "Please find your invoice details below.",
+    labelIssued: "Issued",
+    labelDue: "Due date",
+    labelNoDue: "No due date",
+    colDescription: "Description",
+    colQty: "Qty",
+    colUnit: "Unit price",
+    colTotal: "Total",
+    labelSubtotal: "Subtotal",
+    labelDiscount: "Discount",
+    labelTax: "Tax",
+    labelTotal: "Total due",
+    notesLabel: "Notes",
+    cta: "View Invoice",
+    ctaDownload: "Download PDF",
+    footer: "If you have any questions, feel free to reply to this email.",
+  },
+  es: {
+    subject: (invoiceNumber) => `Factura ${invoiceNumber} de Brillo`,
+    heading: (invoiceNumber) => `Factura ${invoiceNumber}`,
+    greeting: (name) => `Hola ${name},`,
+    intro: "A continuación encontrarás los detalles de tu factura.",
+    labelIssued: "Emitida",
+    labelDue: "Vencimiento",
+    labelNoDue: "Sin vencimiento",
+    colDescription: "Descripción",
+    colQty: "Cant.",
+    colUnit: "Precio unitario",
+    colTotal: "Total",
+    labelSubtotal: "Subtotal",
+    labelDiscount: "Descuento",
+    labelTax: "Impuesto",
+    labelTotal: "Total a pagar",
+    notesLabel: "Notas",
+    cta: "Ver factura",
+    ctaDownload: "Descargar PDF",
+    footer: "Si tienes alguna pregunta, responde a este correo.",
+  },
+  it: {
+    subject: (invoiceNumber) => `Fattura ${invoiceNumber} da Brillo`,
+    heading: (invoiceNumber) => `Fattura ${invoiceNumber}`,
+    greeting: (name) => `Ciao ${name},`,
+    intro: "Di seguito trovi i dettagli della tua fattura.",
+    labelIssued: "Emessa il",
+    labelDue: "Scadenza",
+    labelNoDue: "Nessuna scadenza",
+    colDescription: "Descrizione",
+    colQty: "Qtà",
+    colUnit: "Prezzo unitario",
+    colTotal: "Totale",
+    labelSubtotal: "Subtotale",
+    labelDiscount: "Sconto",
+    labelTax: "Tassa",
+    labelTotal: "Totale da pagare",
+    notesLabel: "Note",
+    cta: "Visualizza fattura",
+    ctaDownload: "Scarica PDF",
+    footer: "Per qualsiasi domanda, rispondi a questa email.",
+  },
+  sq: {
+    subject: (invoiceNumber) => `Fatura ${invoiceNumber} nga Brillo`,
+    heading: (invoiceNumber) => `Fatura ${invoiceNumber}`,
+    greeting: (name) => `Përshëndetje ${name},`,
+    intro: "Më poshtë gjeni detajet e faturës suaj.",
+    labelIssued: "Lëshuar më",
+    labelDue: "Data e skadimit",
+    labelNoDue: "Pa datë skadimi",
+    colDescription: "Përshkrimi",
+    colQty: "Sasi",
+    colUnit: "Çmimi për njësi",
+    colTotal: "Totali",
+    labelSubtotal: "Nëntotali",
+    labelDiscount: "Zbritje",
+    labelTax: "Tatim",
+    labelTotal: "Totali për t'u paguar",
+    notesLabel: "Shënime",
+    cta: "Shiko faturën",
+    ctaDownload: "Shkarko PDF",
+    footer:
+      "Nëse keni pyetje, mos hezitoni të na kontaktoni duke iu përgjigjur këtij emaili.",
+  },
+};
+
+function formatCurrency(amount, currency = "USD") {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amount || 0);
+}
+
+function formatDate(date, lang) {
+  if (!date) return "—";
+  const localeMap = { en: "en-US", es: "es-ES", it: "it-IT" };
+  return new Date(date).toLocaleDateString(localeMap[lang] || "en-US", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function invoiceHtml({ invoice, customerName, lang = "en" }) {
+  const t = invoiceCopy[lang] || invoiceCopy.en;
+  const cur = invoice.currency || "USD";
+
+  const itemRows = (invoice.items || [])
+    .map(
+      (item) => `
+      <tr>
+        <td style="padding:10px 8px;border-bottom:1px solid #E5E3DF;font-size:14px;color:#1A1A1A;">${item.description || ""}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #E5E3DF;font-size:14px;color:#1A1A1A;text-align:center;">${item.priceUnit === "no_price" ? "—" : item.quantity}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #E5E3DF;font-size:14px;color:#1A1A1A;text-align:right;">${item.priceUnit === "no_price" ? "—" : formatCurrency(item.unitPrice, cur)}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #E5E3DF;font-size:14px;font-weight:600;color:#1A1A1A;text-align:right;">${item.priceUnit === "no_price" ? "—" : formatCurrency(item.total, cur)}</td>
+      </tr>`,
+    )
+    .join("");
+
+  const discountRow =
+    invoice.discount && invoice.discount.amount > 0
+      ? `<tr>
+          <td colspan="2" style="padding:6px 0;font-size:14px;color:#6B6B6B;">${t.labelDiscount}</td>
+          <td style="padding:6px 0;font-size:14px;color:#E8602C;text-align:right;">-${formatCurrency(invoice.discount.amount, cur)}</td>
+        </tr>`
+      : "";
+
+  const taxRow =
+    invoice.taxRate > 0
+      ? `<tr>
+          <td colspan="2" style="padding:6px 0;font-size:14px;color:#6B6B6B;">${t.labelTax} (${invoice.taxRate}%)</td>
+          <td style="padding:6px 0;font-size:14px;color:#1A1A1A;text-align:right;">${formatCurrency(invoice.tax, cur)}</td>
+        </tr>`
+      : "";
+
+  const notesSection = invoice.notes
+    ? `<table cellpadding="0" cellspacing="0" style="width:100%;margin-top:24px;">
+        <tr>
+          <td style="background:#F7F6F2;border-radius:10px;padding:16px;">
+            <p style="margin:0 0 6px;font-size:12px;font-weight:600;color:#6B6B6B;text-transform:uppercase;">${t.notesLabel}</p>
+            <p style="margin:0;font-size:14px;color:#1A1A1A;">${invoice.notes}</p>
+          </td>
+        </tr>
+      </table>`
+    : "";
+
+  const invoiceUrl = `${FRONTEND_URL}/invoices/${invoice._id}`;
+
+  return baseLayout(
+    `
+    <p style="margin:0 0 4px;font-size:15px;color:#1A1A1A;font-weight:600;">${t.greeting(customerName)}</p>
+    <p style="margin:0 0 24px;font-size:14px;color:#6B6B6B;">${t.intro}</p>
+
+    <!-- Invoice header -->
+    <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:24px;">
+      <tr>
+        <td>
+          <h2 style="margin:0;font-size:22px;color:#1A1A1A;">${t.heading(invoice.invoiceNumber)}</h2>
+        </td>
+        <td style="text-align:right;vertical-align:top;">
+          <span style="display:inline-block;background:#E8F8F5;color:#00C9AA;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;text-transform:uppercase;">${invoice.status}</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding-top:8px;font-size:13px;color:#6B6B6B;">
+          ${t.labelIssued}: <strong>${formatDate(invoice.issuedDate, lang)}</strong>
+        </td>
+        <td style="padding-top:8px;font-size:13px;color:#6B6B6B;text-align:right;">
+          ${t.labelDue}: <strong>${invoice.dueDate ? formatDate(invoice.dueDate, lang) : t.labelNoDue}</strong>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Items table -->
+    <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      <thead>
+        <tr style="background:#F7F6F2;">
+          <th style="padding:10px 8px;text-align:left;font-size:12px;font-weight:600;color:#6B6B6B;text-transform:uppercase;">${t.colDescription}</th>
+          <th style="padding:10px 8px;text-align:center;font-size:12px;font-weight:600;color:#6B6B6B;text-transform:uppercase;">${t.colQty}</th>
+          <th style="padding:10px 8px;text-align:right;font-size:12px;font-weight:600;color:#6B6B6B;text-transform:uppercase;">${t.colUnit}</th>
+          <th style="padding:10px 8px;text-align:right;font-size:12px;font-weight:600;color:#6B6B6B;text-transform:uppercase;">${t.colTotal}</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemRows}
+      </tbody>
+    </table>
+
+    <!-- Totals -->
+    <table cellpadding="0" cellspacing="0" style="width:240px;margin-left:auto;margin-bottom:28px;">
+      <tr>
+        <td colspan="2" style="padding:6px 0;font-size:14px;color:#6B6B6B;">${t.labelSubtotal}</td>
+        <td style="padding:6px 0;font-size:14px;color:#1A1A1A;text-align:right;">${formatCurrency(invoice.subtotal, cur)}</td>
+      </tr>
+      ${discountRow}
+      ${taxRow}
+      <tr>
+        <td colspan="3" style="padding:4px 0;border-top:2px solid #1A1A1A;"></td>
+      </tr>
+      <tr>
+        <td colspan="2" style="padding:8px 0 0;font-size:16px;font-weight:700;color:#1A1A1A;">${t.labelTotal}</td>
+        <td style="padding:8px 0 0;font-size:16px;font-weight:700;color:#00C9AA;text-align:right;">${formatCurrency(invoice.total, cur)}</td>
+      </tr>
+    </table>
+
+    ${notesSection}
+
+    <!-- CTA -->
+    <div style="text-align:center;margin-top:28px;">
+      <a href="${invoiceUrl}"
+         style="display:inline-block;background:linear-gradient(135deg,#00C9AA,#4A90D9);color:#FFFFFF;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;">
+        ${t.cta}
+      </a>
+    </div>
+
+    <p style="margin:24px 0 0;font-size:13px;color:#9B9B9B;text-align:center;">${t.footer}</p>
+  `,
+    lang,
+  );
+}
+
+/**
+ * Send an invoice by email to the customer.
+ * @param {Object} params
+ * @param {string} params.to           - recipient email
+ * @param {string} params.customerName - full customer name
+ * @param {Object} params.invoice      - full invoice document (plain object)
+ * @param {string} [params.lang]       - language code: 'en' | 'es' | 'it'
+ */
+async function sendInvoiceEmail({ to, customerName, invoice, lang = "en" }) {
+  const t = invoiceCopy[lang] || invoiceCopy.en;
+  const pdfBuffer = await generateInvoicePdfBuffer(invoice, customerName, lang);
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: t.subject(invoice.invoiceNumber),
+    html: invoiceHtml({ invoice, customerName, lang }),
+    attachments: [
+      {
+        filename: `invoice-${invoice.invoiceNumber}.pdf`,
+        content: pdfBuffer,
+      },
+    ],
+  });
+}
+
+module.exports = {
+  sendWelcomeEmail,
+  sendResetPasswordEmail,
+  sendVerificationEmail,
+  sendInvoiceEmail,
+};

@@ -1,32 +1,32 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const messageLogSchema = new mongoose.Schema(
   {
     tenantId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Tenant',
+      ref: "Tenant",
       required: true,
       index: true,
     },
     customerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Customer',
+      ref: "Customer",
     },
     jobId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Job',
+      ref: "Job",
     },
     channel: {
       type: String,
-      enum: ['sms', 'email', 'whatsapp'],
+      enum: ["sms", "email", "whatsapp"],
       required: true,
     },
     direction: {
       type: String,
-      enum: ['outbound', 'inbound'],
+      enum: ["outbound", "inbound"],
       required: true,
     },
-    language: { type: String, enum: ['en', 'es'], default: 'en' },
+    language: { type: String, default: "en" },
     templateKey: String,
     subject: String,
     body: String,
@@ -34,11 +34,11 @@ const messageLogSchema = new mongoose.Schema(
     providerMessageId: String,
     status: {
       type: String,
-      enum: ['queued', 'sent', 'delivered', 'failed', 'opened'],
-      default: 'queued',
+      enum: ["queued", "sent", "delivered", "failed", "opened"],
+      default: "queued",
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-module.exports = mongoose.model('MessageLog', messageLogSchema);
+module.exports = mongoose.model("MessageLog", messageLogSchema);

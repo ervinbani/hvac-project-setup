@@ -6,6 +6,7 @@ const {
   createInvoice,
   updateInvoice,
   sendInvoice,
+  downloadInvoicePdf,
   deleteInvoice,
 } = require('../controllers/invoices.controller');
 const auth = require('../middleware/auth');
@@ -20,6 +21,7 @@ router.get('/:id', getInvoice);
 router.post('/', requireRole(...ADMIN_STAFF), createInvoice);
 router.put('/:id', requireRole(...ADMIN_STAFF), updateInvoice);
 router.post('/:id/send', requireRole(...ADMIN_STAFF), sendInvoice);
+router.get('/:id/pdf', requireRole(...ADMIN_STAFF), downloadInvoicePdf);
 router.delete('/:id', requireRole('owner'), deleteInvoice);
 
 module.exports = router;

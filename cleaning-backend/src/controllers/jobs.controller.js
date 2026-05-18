@@ -62,7 +62,7 @@ const listJobs = async (req, res, next) => {
     const [jobs, total] = await Promise.all([
       Job.find(filter)
         .populate("customerId", "firstName lastName email phone")
-        .populate("serviceId", isCleaner ? "name" : "name basePrice")
+        .populate("serviceId", isCleaner ? "name" : "name basePrice overtime")
         .populate("assignedUsers", "firstName lastName email")
         .sort({ scheduledStart: 1 })
         .skip(skip)
@@ -102,7 +102,7 @@ const getJob = async (req, res, next) => {
         "serviceId",
         isCleaner
           ? "name description durationMinutes"
-          : "name description basePrice durationMinutes",
+          : "name description basePrice durationMinutes overtime",
       )
       .populate("assignedUsers", "firstName lastName email phone")
       .populate("invoiceId", "invoiceNumber status total");
@@ -142,6 +142,7 @@ const createJob = async (req, res, next) => {
       price,
       priceUnit,
       timeDuration,
+      overtimeHours,
     } = req.body;
 
     if (!customerId || !scheduledStart) {
@@ -202,9 +203,8 @@ const createJob = async (req, res, next) => {
       price,
       priceUnit,
       timeDuration,
+      overtimeHours,
     });
-
-    res.status(201).json({ success: true, data: job });
   } catch (err) {
     next(err);
   }
@@ -229,6 +229,7 @@ const updateJob = async (req, res, next) => {
       "price",
       "priceUnit",
       "timeDuration",
+      "overtimeHours",
       "invoiceId",
     ];
 
@@ -324,6 +325,42 @@ const updateJobStatus = async (req, res, next) => {
   }
 };
 
+// PATCH /api/jobs/:id/checklist/:itemId
+const updateChecklistItem = async (req, res, next) => {
+  try {
+    const { completed } = req.body;
+
+    if (typeof completed !== "boolean") {
+      return res
+        .status(400)
+        .json({ success: false, error: "'completed' must be a boolean" });
+    }
+
+    const job = await Job.findOne({
+      _id: req.params.id,
+      tenantId: req.user.tenantId,
+    });
+
+    if (!job) {
+      return res.status(404).json({ success: false, error: "Job not found" });
+    }
+
+    const item = job.checklist.id(req.params.itemId);
+    if (!item) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Checklist item not found" });
+    }
+
+    item.completed = completed;
+    await job.save();
+
+    res.json({ success: true, data: job });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // DELETE /api/jobs/:id
 const deleteJob = async (req, res, next) => {
   try {
@@ -348,5 +385,6 @@ module.exports = {
   createJob,
   updateJob,
   updateJobStatus,
+  updateChecklistItem,
   deleteJob,
 };
