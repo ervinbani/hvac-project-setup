@@ -445,7 +445,8 @@ const invoiceCopy = {
     notesLabel: "Shënime",
     cta: "Shiko faturën",
     ctaDownload: "Shkarko PDF",
-    footer: "Nëse keni pyetje, mos hezitoni të na kontaktoni duke iu përgjigjur këtij emaili.",
+    footer:
+      "Nëse keni pyetje, mos hezitoni të na kontaktoni duke iu përgjigjur këtij emaili.",
   },
 };
 

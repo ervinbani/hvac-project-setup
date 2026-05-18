@@ -27,4 +27,8 @@ const DEFAULT_TENANT_LANGUAGES = [
   { lang: "es", label: "Spanish", active: true, isDefault: false },
 ];
 
-module.exports = { AVAILABLE_LANGUAGES, AVAILABLE_LANG_CODES, DEFAULT_TENANT_LANGUAGES };
+module.exports = {
+  AVAILABLE_LANGUAGES,
+  AVAILABLE_LANG_CODES,
+  DEFAULT_TENANT_LANGUAGES,
+};

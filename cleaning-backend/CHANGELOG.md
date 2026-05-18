@@ -3,7 +3,6 @@
 ## 2026-05-13
 
 6. **Tenant language management** — replaced static `defaultLanguage`/`supportedLanguages` fields with a dynamic `languages[]` array per tenant
-
    - **`src/config/languages.js`** (new) — central registry of all system-supported languages (`en`, `es`, `it`, `sq`, `fr`, `de`, `pt`, `zh`, `ar`, `ru`); exports `AVAILABLE_LANGUAGES`, `AVAILABLE_LANG_CODES`, `DEFAULT_TENANT_LANGUAGES`
    - **`models/Tenant.js`** — new `languages` field: `[{ lang, label, active, isDefault }]`; `isDefault` must be unique and `active`; seeded with `en` (default) + `es` (active) on registration
    - **`models/User.js`**, **`models/Customer.js`**, **`models/MessageLog.js`** — removed hardcoded `enum: ["en","es","it"]` from language fields; values are now dynamically validated against the tenant's enabled languages

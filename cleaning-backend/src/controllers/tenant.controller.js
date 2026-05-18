@@ -1,6 +1,9 @@
 const bcrypt = require("bcryptjs");
 const Tenant = require("../models/Tenant");
-const { AVAILABLE_LANGUAGES, AVAILABLE_LANG_CODES } = require("../config/languages");
+const {
+  AVAILABLE_LANGUAGES,
+  AVAILABLE_LANG_CODES,
+} = require("../config/languages");
 const User = require("../models/User");
 const Role = require("../models/Role");
 const Customer = require("../models/Customer");
@@ -190,4 +193,10 @@ const updateLanguages = async (req, res, next) => {
   }
 };
 
-module.exports = { getTenant, updateTenant, deleteTenant, getAvailableLanguages, updateLanguages };
+module.exports = {
+  getTenant,
+  updateTenant,
+  deleteTenant,
+  getAvailableLanguages,
+  updateLanguages,
+};
