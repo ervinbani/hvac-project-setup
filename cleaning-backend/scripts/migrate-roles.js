@@ -44,10 +44,26 @@ const PERMISSIONS_SEED = [
   { key: "products.read", entity: "products", action: "read" },
   { key: "products.update", entity: "products", action: "update" },
   { key: "products.delete", entity: "products", action: "delete" },
-  { key: "productCategories.create", entity: "productCategories", action: "create" },
-  { key: "productCategories.read", entity: "productCategories", action: "read" },
-  { key: "productCategories.update", entity: "productCategories", action: "update" },
-  { key: "productCategories.delete", entity: "productCategories", action: "delete" },
+  {
+    key: "productCategories.create",
+    entity: "productCategories",
+    action: "create",
+  },
+  {
+    key: "productCategories.read",
+    entity: "productCategories",
+    action: "read",
+  },
+  {
+    key: "productCategories.update",
+    entity: "productCategories",
+    action: "update",
+  },
+  {
+    key: "productCategories.delete",
+    entity: "productCategories",
+    action: "delete",
+  },
 ];
 
 async function ensureDefaultRoles(tenantId) {
