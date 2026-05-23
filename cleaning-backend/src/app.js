@@ -20,6 +20,8 @@ const dashboardRoutes = require("./routes/dashboard.routes");
 const rolesRoutes = require("./routes/roles.routes");
 const permissionsRoutes = require("./routes/permissions.routes");
 const uploadsRoutes = require("./routes/uploads.routes");
+const productsRoutes = require("./routes/products.routes");
+const productCategoriesRoutes = require("./routes/productCategories.routes");
 
 const app = express();
 
@@ -112,6 +114,8 @@ app.use("/api/automations", automationsRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/roles", rolesRoutes);
 app.use("/api/permissions", permissionsRoutes);
+app.use("/api/products", productsRoutes);
+app.use("/api/product-categories", productCategoriesRoutes);
 
 // LOW-2: Don't reflect the raw URL back
 app.use((req, res) => {
