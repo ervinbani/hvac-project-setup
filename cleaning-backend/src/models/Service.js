@@ -20,15 +20,13 @@ const serviceSchema = new mongoose.Schema(
     basePrice: Number,
     priceUnit: {
       type: String,
-      enum: ["per_hour", "per_job", "per_day"],
-      default: "per_job",
+      default: "job",
     },
     overtime: {
       isEnabled: { type: Boolean, default: false },
       unit: {
         type: String,
-        enum: ["per_hour", "per_job", "per_day"],
-        default: "per_hour",
+        default: "hour",
       },
       extraPercentage: {
         type: Number,

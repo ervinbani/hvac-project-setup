@@ -1,8 +1,17 @@
 const mongoose = require("mongoose");
 const Product = require("../models/Product");
 const ProductCategory = require("../models/ProductCategory");
+const Tenant = require("../models/Tenant");
+const { getEffectiveUnits } = require("../config/businessUnits");
 
-const VALID_UNITS = ["piece", "box", "liter", "kg", "gallon", "pack", "other"];
+// Returns the effective product units for the current tenant
+async function getProductUnits(tenantId) {
+  const tenant = await Tenant.findById(tenantId)
+    .select("businessType unitSettings")
+    .lean();
+  if (!tenant) return [];
+  return getEffectiveUnits(tenant.businessType, tenant.unitSettings).productUnits;
+}
 
 // GET /api/products
 const listProducts = async (req, res, next) => {
@@ -89,11 +98,14 @@ const createProduct = async (req, res, next) => {
       });
     }
 
-    if (unit !== undefined && !VALID_UNITS.includes(unit)) {
-      return res.status(400).json({
-        success: false,
-        error: `unit must be one of: ${VALID_UNITS.join(", ")}`,
-      });
+    if (unit !== undefined) {
+      const validUnits = await getProductUnits(req.user.tenantId);
+      if (!validUnits.includes(unit)) {
+        return res.status(400).json({
+          success: false,
+          error: `unit must be one of: ${validUnits.join(", ")}`,
+        });
+      }
     }
 
     // Verify categoryId belongs to this tenant (if provided)
@@ -172,11 +184,14 @@ const updateProduct = async (req, res, next) => {
       });
     }
 
-    if (updates.unit !== undefined && !VALID_UNITS.includes(updates.unit)) {
-      return res.status(400).json({
-        success: false,
-        error: `unit must be one of: ${VALID_UNITS.join(", ")}`,
-      });
+    if (updates.unit !== undefined) {
+      const validUnits = await getProductUnits(req.user.tenantId);
+      if (!validUnits.includes(updates.unit)) {
+        return res.status(400).json({
+          success: false,
+          error: `unit must be one of: ${validUnits.join(", ")}`,
+        });
+      }
     }
 
     // Verify categoryId belongs to this tenant (if being changed)

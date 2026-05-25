@@ -47,6 +47,12 @@ const tenantSchema = new mongoose.Schema(
       },
       renewalDate: Date,
     },
+
+    // Per-tenant unit customisation (extends the businessType defaults)
+    unitSettings: {
+      productUnits: { type: [String], default: [] },
+      priceUnits: { type: [String], default: [] },
+    },
   },
   { timestamps: true },
 );

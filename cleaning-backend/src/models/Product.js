@@ -1,7 +1,5 @@
 const mongoose = require("mongoose");
 
-const VALID_UNITS = ["piece", "box", "liter", "kg", "gallon", "pack", "other"];
-
 const productSchema = new mongoose.Schema(
   {
     tenantId: {
@@ -27,7 +25,6 @@ const productSchema = new mongoose.Schema(
     barcode: { type: String, default: null },
     unit: {
       type: String,
-      enum: VALID_UNITS,
       default: "piece",
     },
     unitPrice: { type: Number, min: 0, default: 0 },

@@ -59,8 +59,7 @@ const jobSchema = new mongoose.Schema(
     price: Number,
     priceUnit: {
       type: String,
-      enum: ["per_hour", "per_job", "per_day"],
-      default: "per_job",
+      default: "job",
     },
     timeDuration: { type: Number, default: 0 },
     overtimeHours: { type: Number, min: 0, default: null },
@@ -68,6 +67,18 @@ const jobSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Invoice",
     },
+    timeEntries: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        clockIn: { type: Date, required: true },
+        clockOut: { type: Date, default: null },
+        duration: { type: Number, default: null }, // minutes, calculated at punch-out
+      },
+    ],
   },
   { timestamps: true },
 );

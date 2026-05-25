@@ -1,9 +1,18 @@
 const Service = require("../models/Service");
+const Tenant = require("../models/Tenant");
+const { getEffectiveUnits } = require("../config/businessUnits");
 
-const VALID_UNITS = ["per_hour", "per_job", "per_day"];
+// Returns the effective price units for the current tenant
+async function getPriceUnits(tenantId) {
+  const tenant = await Tenant.findById(tenantId)
+    .select("businessType unitSettings")
+    .lean();
+  if (!tenant) return [];
+  return getEffectiveUnits(tenant.businessType, tenant.unitSettings).priceUnits;
+}
 
 // Validates the overtime object provided by the user
-function validateOvertime(overtime) {
+function validateOvertime(overtime, validUnits) {
   if (typeof overtime !== "object" || overtime === null) {
     return "overtime must be an object";
   }
@@ -16,8 +25,8 @@ function validateOvertime(overtime) {
       return "overtime.extraPercentage must be a number between 0 and 1000";
     }
   }
-  if (overtime.unit != null && !VALID_UNITS.includes(overtime.unit)) {
-    return `overtime.unit must be one of: ${VALID_UNITS.join(", ")}`;
+  if (overtime.unit != null && !validUnits.includes(overtime.unit)) {
+    return `overtime.unit must be one of: ${validUnits.join(", ")}`;
   }
   return null;
 }
@@ -73,8 +82,17 @@ const createService = async (req, res, next) => {
       });
     }
 
+    const validUnits = await getPriceUnits(req.user.tenantId);
+
+    if (priceUnit !== undefined && !validUnits.includes(priceUnit)) {
+      return res.status(400).json({
+        success: false,
+        error: `priceUnit must be one of: ${validUnits.join(", ")}`,
+      });
+    }
+
     if (overtime !== undefined) {
-      const validationError = validateOvertime(overtime);
+      const validationError = validateOvertime(overtime, validUnits);
       if (validationError) {
         return res.status(400).json({ success: false, error: validationError });
       }
@@ -117,9 +135,26 @@ const updateService = async (req, res, next) => {
     }
 
     if (updates.overtime !== undefined) {
-      const validationError = validateOvertime(updates.overtime);
+      const validUnits = await getPriceUnits(req.user.tenantId);
+
+      if (updates.priceUnit !== undefined && !validUnits.includes(updates.priceUnit)) {
+        return res.status(400).json({
+          success: false,
+          error: `priceUnit must be one of: ${validUnits.join(", ")}`,
+        });
+      }
+
+      const validationError = validateOvertime(updates.overtime, validUnits);
       if (validationError) {
         return res.status(400).json({ success: false, error: validationError });
+      }
+    } else if (updates.priceUnit !== undefined) {
+      const validUnits = await getPriceUnits(req.user.tenantId);
+      if (!validUnits.includes(updates.priceUnit)) {
+        return res.status(400).json({
+          success: false,
+          error: `priceUnit must be one of: ${validUnits.join(", ")}`,
+        });
       }
     }
 

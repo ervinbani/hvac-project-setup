@@ -4,6 +4,7 @@ const {
   AVAILABLE_LANGUAGES,
   AVAILABLE_LANG_CODES,
 } = require("../config/languages");
+const { BUSINESS_UNITS, getEffectiveUnits } = require("../config/businessUnits");
 const User = require("../models/User");
 const Role = require("../models/Role");
 const Customer = require("../models/Customer");
@@ -193,10 +194,106 @@ const updateLanguages = async (req, res, next) => {
   }
 };
 
+// GET /api/tenant/units — returns effective unit sets for this tenant
+const getUnits = async (req, res, next) => {
+  try {
+    const tenant = await Tenant.findById(req.user.tenantId)
+      .select("businessType unitSettings")
+      .lean();
+    if (!tenant) {
+      return res.status(404).json({ success: false, error: "Tenant not found" });
+    }
+
+    const effective = getEffectiveUnits(tenant.businessType, tenant.unitSettings);
+    const defaults = (BUSINESS_UNITS[tenant.businessType] || BUSINESS_UNITS.default);
+
+    res.json({
+      success: true,
+      data: {
+        businessType: tenant.businessType,
+        productUnits: effective.productUnits,
+        priceUnits: effective.priceUnits,
+        defaults: {
+          productUnits: defaults.productUnits,
+          priceUnits: defaults.priceUnits,
+        },
+        custom: {
+          productUnits: tenant.unitSettings?.productUnits || [],
+          priceUnits: tenant.unitSettings?.priceUnits || [],
+        },
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PUT /api/tenant/units — updates custom unit additions for this tenant
+const updateUnits = async (req, res, next) => {
+  try {
+    const { productUnits, priceUnits } = req.body;
+    const updates = {};
+
+    if (productUnits !== undefined) {
+      if (
+        !Array.isArray(productUnits) ||
+        !productUnits.every((u) => typeof u === "string" && u.trim().length > 0)
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: "productUnits must be an array of non-empty strings",
+        });
+      }
+      updates["unitSettings.productUnits"] = [
+        ...new Set(productUnits.map((u) => u.trim().toLowerCase())),
+      ];
+    }
+
+    if (priceUnits !== undefined) {
+      if (
+        !Array.isArray(priceUnits) ||
+        !priceUnits.every((u) => typeof u === "string" && u.trim().length > 0)
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: "priceUnits must be an array of non-empty strings",
+        });
+      }
+      updates["unitSettings.priceUnits"] = [
+        ...new Set(priceUnits.map((u) => u.trim().toLowerCase())),
+      ];
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Provide at least one of: productUnits, priceUnits",
+      });
+    }
+
+    const tenant = await Tenant.findByIdAndUpdate(
+      req.user.tenantId,
+      { $set: updates },
+      { new: true, runValidators: true },
+    ).select("businessType unitSettings");
+
+    if (!tenant) {
+      return res.status(404).json({ success: false, error: "Tenant not found" });
+    }
+
+    const effective = getEffectiveUnits(tenant.businessType, tenant.unitSettings);
+    res.json({ success: true, data: { effective, custom: tenant.unitSettings } });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getTenant,
   updateTenant,
   deleteTenant,
   getAvailableLanguages,
   updateLanguages,
+  getUnits,
+  updateUnits,
 };

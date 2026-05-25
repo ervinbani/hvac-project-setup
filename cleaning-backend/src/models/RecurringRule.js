@@ -39,8 +39,7 @@ const recurringRuleSchema = new mongoose.Schema(
     price: Number,
     priceUnit: {
       type: String,
-      enum: ["per_hour", "per_job", "per_day"],
-      default: "per_job",
+      default: "job",
     },
     propertyAddress: {
       street: String,

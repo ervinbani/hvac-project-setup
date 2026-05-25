@@ -105,7 +105,8 @@ const getJob = async (req, res, next) => {
           : "name description basePrice durationMinutes overtime",
       )
       .populate("assignedUsers", "firstName lastName email phone")
-      .populate("invoiceId", "invoiceNumber status total");
+      .populate("invoiceId", "invoiceNumber status total")
+      .populate("timeEntries.userId", "firstName lastName");
 
     if (!job) {
       return res.status(404).json({ success: false, error: "Job not found" });
@@ -361,6 +362,93 @@ const updateChecklistItem = async (req, res, next) => {
   }
 };
 
+// POST /api/jobs/:id/punch-in
+const punchIn = async (req, res, next) => {
+  try {
+    const job = await Job.findOne({
+      _id: req.params.id,
+      tenantId: req.user.tenantId,
+    });
+    if (!job) {
+      return res.status(404).json({ success: false, error: "Job not found" });
+    }
+
+    const isAssigned = job.assignedUsers.some(
+      (uid) => uid.toString() === req.user.id,
+    );
+    if (!isAssigned) {
+      return res
+        .status(403)
+        .json({ success: false, error: "You are not assigned to this job" });
+    }
+
+    const openEntry = job.timeEntries.find(
+      (e) => e.userId.toString() === req.user.id && e.clockOut == null,
+    );
+    if (openEntry) {
+      return res
+        .status(409)
+        .json({ success: false, message: "Already clocked in" });
+    }
+
+    job.timeEntries.push({ userId: req.user.id, clockIn: new Date() });
+
+    if (job.status === "scheduled" || job.status === "confirmed") {
+      job.status = "in_progress";
+    }
+
+    await job.save();
+    await job.populate("timeEntries.userId", "firstName lastName");
+
+    res.json({ success: true, data: job });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/jobs/:id/punch-out
+const punchOut = async (req, res, next) => {
+  try {
+    const job = await Job.findOne({
+      _id: req.params.id,
+      tenantId: req.user.tenantId,
+    });
+    if (!job) {
+      return res.status(404).json({ success: false, error: "Job not found" });
+    }
+
+    const isAssigned = job.assignedUsers.some(
+      (uid) => uid.toString() === req.user.id,
+    );
+    if (!isAssigned) {
+      return res
+        .status(403)
+        .json({ success: false, error: "You are not assigned to this job" });
+    }
+
+    // Find the last open entry for this user
+    const openEntry = [...job.timeEntries]
+      .reverse()
+      .find((e) => e.userId.toString() === req.user.id && e.clockOut == null);
+    if (!openEntry) {
+      return res
+        .status(409)
+        .json({ success: false, message: "Not clocked in" });
+    }
+
+    const clockOut = new Date();
+    openEntry.clockOut = clockOut;
+    openEntry.duration = Math.round((clockOut - openEntry.clockIn) / 60000);
+
+    await job.save();
+    await job.populate("timeEntries.userId", "firstName lastName");
+
+    res.json({ success: true, data: job });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // DELETE /api/jobs/:id
 const deleteJob = async (req, res, next) => {
   try {
@@ -387,4 +475,6 @@ module.exports = {
   updateJobStatus,
   updateChecklistItem,
   deleteJob,
+  punchIn,
+  punchOut,
 };

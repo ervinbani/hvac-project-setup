@@ -8,6 +8,8 @@ const {
   updateJobStatus,
   updateChecklistItem,
   deleteJob,
+  punchIn,
+  punchOut,
 } = require("../controllers/jobs.controller");
 const auth = require("../middleware/auth");
 const requireRole = require("../middleware/requireRole");
@@ -28,6 +30,8 @@ router.patch(
   requireRole(...ALL_ROLES),
   updateChecklistItem,
 );
+router.post("/:id/punch-in", requireRole(...ALL_ROLES), punchIn);
+router.post("/:id/punch-out", requireRole(...ALL_ROLES), punchOut);
 router.delete("/:id", requireRole(...ADMIN), deleteJob);
 
 module.exports = router;

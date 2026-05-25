@@ -20,7 +20,7 @@ const buildCustomerSnapshot = (customer) => ({
   vatNumber: customer.vatNumber || "",
 });
 
-const VALID_PRICE_UNITS = ["per_hour", "per_job", "per_day", "no_price"];
+const VALID_PRICE_UNITS = ["hour", "job", "day", "m2", "sqft", "meter", "unit", "point", "no_price"];
 
 const sanitizeItems = (items = []) =>
   items.map((item) => {
@@ -31,7 +31,7 @@ const sanitizeItems = (items = []) =>
       description: String(item.description || "").slice(0, 500),
       serviceType: String(item.serviceType || "").slice(0, 100),
       quantity: qty,
-      unit: isNoPrice ? "no_price" : String(item.unit || "hours").slice(0, 20),
+      unit: isNoPrice ? "no_price" : String(item.unit || "hour").slice(0, 20),
       unitPrice: price,
       total: isNoPrice ? 0 : parseFloat((qty * price).toFixed(2)),
     };
