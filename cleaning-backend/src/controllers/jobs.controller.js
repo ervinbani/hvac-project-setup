@@ -449,6 +449,68 @@ const punchOut = async (req, res, next) => {
   }
 };
 
+// POST /api/jobs/:id/time-entries
+const addTimeEntry = async (req, res, next) => {
+  try {
+    const { userId, clockIn, durationMinutes } = req.body;
+
+    if (!userId || !clockIn || !durationMinutes) {
+      return res.status(400).json({
+        success: false,
+        error: "userId, clockIn and durationMinutes are required",
+      });
+    }
+    if (typeof durationMinutes !== "number" || durationMinutes <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: "durationMinutes must be a positive number",
+      });
+    }
+
+    // Verify the target user belongs to this tenant
+    const targetUser = await User.findOne({
+      _id: userId,
+      tenantId: req.user.tenantId,
+    });
+    if (!targetUser) {
+      return res.status(400).json({ success: false, error: "Invalid userId" });
+    }
+
+    const job = await Job.findOne({
+      _id: req.params.id,
+      tenantId: req.user.tenantId,
+    });
+    if (!job) {
+      return res.status(404).json({ success: false, error: "Job not found" });
+    }
+
+    const clockInDate = new Date(clockIn);
+    if (isNaN(clockInDate.getTime())) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Invalid clockIn date" });
+    }
+
+    const clockOutDate = new Date(
+      clockInDate.getTime() + durationMinutes * 60000,
+    );
+
+    job.timeEntries.push({
+      userId,
+      clockIn: clockInDate,
+      clockOut: clockOutDate,
+      duration: durationMinutes,
+    });
+
+    await job.save();
+    await job.populate("timeEntries.userId", "firstName lastName");
+
+    res.json({ success: true, data: job });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // DELETE /api/jobs/:id
 const deleteJob = async (req, res, next) => {
   try {
@@ -477,4 +539,5 @@ module.exports = {
   deleteJob,
   punchIn,
   punchOut,
+  addTimeEntry,
 };

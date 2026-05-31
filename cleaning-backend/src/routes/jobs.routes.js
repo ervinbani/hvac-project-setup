@@ -10,6 +10,7 @@ const {
   deleteJob,
   punchIn,
   punchOut,
+  addTimeEntry,
 } = require("../controllers/jobs.controller");
 const auth = require("../middleware/auth");
 const requireRole = require("../middleware/requireRole");
@@ -32,6 +33,7 @@ router.patch(
 );
 router.post("/:id/punch-in", requireRole(...ALL_ROLES), punchIn);
 router.post("/:id/punch-out", requireRole(...ALL_ROLES), punchOut);
+router.post("/:id/time-entries", requireRole(...ADMIN_STAFF), addTimeEntry);
 router.delete("/:id", requireRole(...ADMIN), deleteJob);
 
 module.exports = router;
