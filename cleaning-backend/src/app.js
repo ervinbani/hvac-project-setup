@@ -21,7 +21,8 @@ const rolesRoutes = require("./routes/roles.routes");
 const permissionsRoutes = require("./routes/permissions.routes");
 const uploadsRoutes = require("./routes/uploads.routes");
 const productsRoutes = require("./routes/products.routes");
-const productCategoriesRoutes = require("./routes/productCategories.routes");const timesheetsRoutes = require('./routes/timesheets.routes');
+const productCategoriesRoutes = require("./routes/productCategories.routes");
+const timesheetsRoutes = require("./routes/timesheets.routes");
 const app = express();
 
 // Security headers

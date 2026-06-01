@@ -326,7 +326,14 @@ async function seed() {
       code: "staff",
       isSystemRole: true,
       isActive: true,
-      permissions: pids(["jobs.read", "services.read", "invoices.read", "documents.create", "documents.read", "timesheets.read"]),
+      permissions: pids([
+        "jobs.read",
+        "services.read",
+        "invoices.read",
+        "documents.create",
+        "documents.read",
+        "timesheets.read",
+      ]),
     },
     {
       name: "Worker",

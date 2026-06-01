@@ -19,21 +19,20 @@ const listTimesheets = async (req, res, next) => {
     const rawDateTo =
       typeof req.query.dateTo === "string" ? req.query.dateTo : undefined;
 
-    const jobFilter = { tenantId: new mongoose.Types.ObjectId(req.user.tenantId) };
+    const jobFilter = {
+      tenantId: new mongoose.Types.ObjectId(req.user.tenantId),
+    };
     if (rawJobId) jobFilter._id = new mongoose.Types.ObjectId(rawJobId);
 
     // Build pipeline to unwind timeEntries
-    const pipeline = [
-      { $match: jobFilter },
-      { $unwind: "$timeEntries" },
-    ];
+    const pipeline = [{ $match: jobFilter }, { $unwind: "$timeEntries" }];
 
     // Restrict to own entries for worker / staff
     const targetUserId = isRestricted
       ? new mongoose.Types.ObjectId(req.user.id)
       : rawUserId
-      ? new mongoose.Types.ObjectId(rawUserId)
-      : null;
+        ? new mongoose.Types.ObjectId(rawUserId)
+        : null;
 
     if (targetUserId) {
       pipeline.push({
@@ -135,24 +134,28 @@ const updateTimeEntry = async (req, res, next) => {
       if (typeof duration !== "number" || duration < 0)
         return res
           .status(400)
-          .json({ success: false, error: "duration must be a non-negative number" });
+          .json({
+            success: false,
+            error: "duration must be a non-negative number",
+          });
       entry.duration = duration;
     }
 
     // Auto-recalculate duration if both times are set and duration not explicitly provided
-    if (clockIn === undefined && clockOut === undefined && duration === undefined) {
+    if (
+      clockIn === undefined &&
+      clockOut === undefined &&
+      duration === undefined
+    ) {
       return res
         .status(400)
-        .json({ success: false, error: "Provide at least one field to update" });
+        .json({
+          success: false,
+          error: "Provide at least one field to update",
+        });
     }
-    if (
-      duration === undefined &&
-      entry.clockIn &&
-      entry.clockOut
-    ) {
-      entry.duration = Math.round(
-        (entry.clockOut - entry.clockIn) / 60000,
-      );
+    if (duration === undefined && entry.clockIn && entry.clockOut) {
+      entry.duration = Math.round((entry.clockOut - entry.clockIn) / 60000);
     }
 
     await job.save();
