@@ -209,6 +209,12 @@ async function seed() {
       description: "Delete files",
     },
     {
+      key: "timesheets.create",
+      entity: "timesheets",
+      action: "create",
+      description: "Add manual time entries",
+    },
+    {
       key: "timesheets.read",
       entity: "timesheets",
       action: "read",

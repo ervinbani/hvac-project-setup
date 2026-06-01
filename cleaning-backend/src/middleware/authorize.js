@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Role = require('../models/Role');
 
 /**
  * Permission-based middleware.
@@ -24,7 +25,19 @@ const authorize = (permissionKey) => async (req, res, next) => {
         .populate({ path: 'roleId', populate: { path: 'permissions' } })
         .lean();
 
-      req.user.permissions = user?.roleId?.permissions || [];
+      if (user?.roleId?.permissions) {
+        // Normal path: user has a valid roleId
+        req.user.permissions = user.roleId.permissions;
+      } else {
+        // Fallback: user was created before roleId was set — resolve by role code + tenantId
+        const role = await Role.findOne({
+          tenantId: req.user.tenantId,
+          code: req.user.role,
+        })
+          .populate('permissions')
+          .lean();
+        req.user.permissions = role?.permissions || [];
+      }
     }
 
     const allowed = req.user.permissions.some((p) => p.key === permissionKey);

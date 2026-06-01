@@ -1,5 +1,6 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
+const Role = require("../models/Role");
 
 // GET /api/users
 const listUsers = async (req, res, next) => {
@@ -136,6 +137,8 @@ const createUser = async (req, res, next) => {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
+    const roleDoc = await Role.findOne({ tenantId: req.user.tenantId, code: role }).lean();
+
     const user = await User.create({
       tenantId: req.user.tenantId,
       firstName,
@@ -143,6 +146,7 @@ const createUser = async (req, res, next) => {
       email: email.toLowerCase(),
       passwordHash,
       role,
+      roleId: roleDoc?._id ?? null,
       phone,
       preferredLanguage,
       isActive: false,
@@ -219,6 +223,12 @@ const updateUser = async (req, res, next) => {
           error: "You cannot assign a role equal to or higher than your own",
         });
       }
+    }
+
+    // Sync roleId when role changes
+    if (updates.role) {
+      const roleDoc = await Role.findOne({ tenantId: req.user.tenantId, code: updates.role }).lean();
+      updates.roleId = roleDoc?._id ?? null;
     }
 
     // Allow password update
