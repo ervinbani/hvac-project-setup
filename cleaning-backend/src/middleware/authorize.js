@@ -1,5 +1,5 @@
-const User = require('../models/User');
-const Role = require('../models/Role');
+const User = require("../models/User");
+const Role = require("../models/Role");
 
 /**
  * Permission-based middleware.
@@ -11,18 +11,18 @@ const Role = require('../models/Role');
 const authorize = (permissionKey) => async (req, res, next) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
+      return res.status(401).json({ success: false, error: "Unauthorized" });
     }
 
     // Owner bypass — full access
-    if (req.user.role === 'owner') {
+    if (req.user.role === "owner") {
       return next();
     }
 
     // Lazy-load permissions once per request
     if (!req.user.permissions) {
       const user = await User.findById(req.user.id)
-        .populate({ path: 'roleId', populate: { path: 'permissions' } })
+        .populate({ path: "roleId", populate: { path: "permissions" } })
         .lean();
 
       if (user?.roleId?.permissions) {
@@ -34,7 +34,7 @@ const authorize = (permissionKey) => async (req, res, next) => {
           tenantId: req.user.tenantId,
           code: req.user.role,
         })
-          .populate('permissions')
+          .populate("permissions")
           .lean();
         req.user.permissions = role?.permissions || [];
       }
@@ -42,7 +42,7 @@ const authorize = (permissionKey) => async (req, res, next) => {
 
     const allowed = req.user.permissions.some((p) => p.key === permissionKey);
     if (!allowed) {
-      return res.status(403).json({ success: false, error: 'Forbidden' });
+      return res.status(403).json({ success: false, error: "Forbidden" });
     }
 
     next();

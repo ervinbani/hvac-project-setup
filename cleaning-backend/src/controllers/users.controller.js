@@ -137,7 +137,10 @@ const createUser = async (req, res, next) => {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    const roleDoc = await Role.findOne({ tenantId: req.user.tenantId, code: role }).lean();
+    const roleDoc = await Role.findOne({
+      tenantId: req.user.tenantId,
+      code: role,
+    }).lean();
 
     const user = await User.create({
       tenantId: req.user.tenantId,
@@ -227,7 +230,10 @@ const updateUser = async (req, res, next) => {
 
     // Sync roleId when role changes
     if (updates.role) {
-      const roleDoc = await Role.findOne({ tenantId: req.user.tenantId, code: updates.role }).lean();
+      const roleDoc = await Role.findOne({
+        tenantId: req.user.tenantId,
+        code: updates.role,
+      }).lean();
       updates.roleId = roleDoc?._id ?? null;
     }
 
