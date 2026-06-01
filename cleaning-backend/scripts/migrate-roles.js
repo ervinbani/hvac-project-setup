@@ -64,6 +64,24 @@ const PERMISSIONS_SEED = [
     entity: "productCategories",
     action: "delete",
   },
+  {
+    key: "timesheets.read",
+    entity: "timesheets",
+    action: "read",
+    description: "View time entries (own only for worker/staff)",
+  },
+  {
+    key: "timesheets.update",
+    entity: "timesheets",
+    action: "update",
+    description: "Correct time entries",
+  },
+  {
+    key: "timesheets.delete",
+    entity: "timesheets",
+    action: "delete",
+    description: "Delete time entries",
+  },
 ];
 
 async function ensureDefaultRoles(tenantId) {
@@ -124,6 +142,9 @@ async function ensureDefaultRoles(tenantId) {
         "productCategories.read",
         "productCategories.update",
         "productCategories.delete",
+        "timesheets.read",
+        "timesheets.update",
+        "timesheets.delete",
       ]),
     },
     {
@@ -149,6 +170,9 @@ async function ensureDefaultRoles(tenantId) {
         "documents.read",
         "documents.update",
         "documents.delete",
+        "timesheets.read",
+        "timesheets.update",
+        "timesheets.delete",
       ]),
     },
     {
@@ -163,6 +187,8 @@ async function ensureDefaultRoles(tenantId) {
         "users.delete",
         "documents.create",
         "documents.read",
+        "timesheets.read",
+        "timesheets.update",
       ]),
     },
     {
@@ -178,6 +204,7 @@ async function ensureDefaultRoles(tenantId) {
         "productCategories.read",
         "documents.create",
         "documents.read",
+        "timesheets.read",
       ]),
     },
     {
@@ -185,7 +212,7 @@ async function ensureDefaultRoles(tenantId) {
       code: "worker",
       isSystemRole: true,
       isActive: true,
-      permissions: pids(["jobs.read"]),
+      permissions: pids(["jobs.read", "timesheets.read"]),
     },
   ];
 

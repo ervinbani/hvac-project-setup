@@ -20,6 +20,7 @@ const PermissionSchema = new mongoose.Schema(
         "roles",
         "permissions",
         "documents",
+        "timesheets",
       ],
     },
     action: {

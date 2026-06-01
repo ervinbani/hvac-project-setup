@@ -72,6 +72,10 @@
 | GET /api/uploads/presigned-read | ✗ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | GET /api/uploads/presigned-url | ✗ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | DELETE /api/uploads | ✗ | ✗ | ✗ | ✅ | ✅ | ✅ |
+| **TIMESHEETS** | | | | | | |
+| GET /api/timesheets | ✅ (own) | ✅ (own) | ✅ (all) | ✅ (all) | ✅ (all) | ✅ (all) |
+| PATCH /api/timesheets/:jobId/:entryId | ✗ | ✗ | ✅ | ✅ | ✅ | ✅ |
+| DELETE /api/timesheets/:jobId/:entryId | ✗ | ✗ | ✗ | ✅ | ✅ | ✅ |
 
 ---
 

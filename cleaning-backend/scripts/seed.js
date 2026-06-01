@@ -208,6 +208,24 @@ async function seed() {
       action: "delete",
       description: "Delete files",
     },
+    {
+      key: "timesheets.read",
+      entity: "timesheets",
+      action: "read",
+      description: "View time entries (own only for worker/staff)",
+    },
+    {
+      key: "timesheets.update",
+      entity: "timesheets",
+      action: "update",
+      description: "Correct time entries",
+    },
+    {
+      key: "timesheets.delete",
+      entity: "timesheets",
+      action: "delete",
+      description: "Delete time entries",
+    },
   ];
 
   await Promise.all(
@@ -260,6 +278,9 @@ async function seed() {
         "documents.read",
         "documents.update",
         "documents.delete",
+        "timesheets.read",
+        "timesheets.update",
+        "timesheets.delete",
       ]),
     },
     {
@@ -279,6 +300,9 @@ async function seed() {
         "documents.read",
         "documents.update",
         "documents.delete",
+        "timesheets.read",
+        "timesheets.update",
+        "timesheets.delete",
       ]),
     },
     {
@@ -293,6 +317,8 @@ async function seed() {
         "users.delete",
         "documents.create",
         "documents.read",
+        "timesheets.read",
+        "timesheets.update",
       ]),
     },
     {
@@ -300,14 +326,14 @@ async function seed() {
       code: "staff",
       isSystemRole: true,
       isActive: true,
-      permissions: pids(["jobs.read", "services.read", "invoices.read", "documents.create", "documents.read"]),
+      permissions: pids(["jobs.read", "services.read", "invoices.read", "documents.create", "documents.read", "timesheets.read"]),
     },
     {
       name: "Worker",
       code: "worker",
       isSystemRole: true,
       isActive: true,
-      permissions: pids(["jobs.read"]),
+      permissions: pids(["jobs.read", "timesheets.read"]),
     },
   ];
 
