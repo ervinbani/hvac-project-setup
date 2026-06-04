@@ -23,6 +23,7 @@ const uploadsRoutes = require("./routes/uploads.routes");
 const productsRoutes = require("./routes/products.routes");
 const productCategoriesRoutes = require("./routes/productCategories.routes");
 const timesheetsRoutes = require("./routes/timesheets.routes");
+const aiRoutes = require("./routes/ai.routes");
 const app = express();
 
 // Security headers
@@ -87,10 +88,23 @@ const apiLimiter = rateLimit({
   message: { success: false, error: "Too many requests, please slow down." },
 });
 
+// CRIT-3: Tight rate limit for AI (costs real money per call)
+const aiLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: "Too many AI requests, please try again later.",
+  },
+});
+
 if (process.env.NODE_ENV !== "test") {
   app.use("/api/", apiLimiter);
   app.use("/api/auth/login", authLimiter);
   app.use("/api/auth/register", registerLimiter);
+  app.use("/api/ai", aiLimiter);
 }
 
 // Health check
@@ -117,6 +131,7 @@ app.use("/api/permissions", permissionsRoutes);
 app.use("/api/products", productsRoutes);
 app.use("/api/product-categories", productCategoriesRoutes);
 app.use("/api/timesheets", timesheetsRoutes);
+app.use("/api/ai", aiRoutes);
 
 // LOW-2: Don't reflect the raw URL back
 app.use((req, res) => {
