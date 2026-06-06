@@ -16,6 +16,7 @@ const auth = (req, res, next) => {
       tenantId: decoded.tenantId,
       role: decoded.role,
       roleId: decoded.roleId || null,
+      businessType: decoded.businessType || "cleaning",
     };
     next();
   } catch (err) {

@@ -66,6 +66,11 @@ Base URL: `http://localhost:5000/api/`
 ## Dashboard
 - **GET** `/dashboard` — Get dashboard data (auth required)
 
+## AI
+- **POST** `/ai/chat` — Send a chat message to the AI assistant (auth required)
+  - Body: `{ messages: [{ role: "user"|"assistant", content: string }] }`
+  - Rate limit: **10 requests per 5 minutes**
+
 ---
 
 > **Note:** Most endpoints require a valid JWT token in the `Authorization` header: `Bearer <token>`

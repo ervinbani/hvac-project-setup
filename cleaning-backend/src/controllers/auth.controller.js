@@ -12,13 +12,14 @@ const {
   sendVerificationEmail,
 } = require("../services/email.service");
 
-const generateToken = (user) => {
+const generateToken = (user, businessType = "cleaning") => {
   return jwt.sign(
     {
       userId: user._id,
       tenantId: user.tenantId,
       role: user.role,
       roleId: user.roleId,
+      businessType,
     },
     process.env.JWT_SECRET,
     { expiresIn: "7d" },
@@ -364,7 +365,10 @@ const login = async (req, res, next) => {
     user.lastLoginAt = new Date();
     await user.save();
 
-    const token = generateToken(user);
+    // Load tenant businessType for the JWT
+    const tenant = await Tenant.findById(user.tenantId).select("businessType").lean();
+
+    const token = generateToken(user, tenant?.businessType || "cleaning");
 
     res.json({
       success: true,
