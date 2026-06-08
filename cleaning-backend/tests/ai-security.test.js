@@ -158,6 +158,21 @@ describe('Read tools — cross-tenant isolation', () => {
     expect(result[0].firstName).toBe('Mario');
   });
 
+  it('listCustomers returns only own tenant customers', async () => {
+    const tools = buildTools({ user: { tenantId: TENANT_A_ID, id: USER_A_ID, role: 'owner', businessType: 'cleaning' } });
+    const result = await tools.listCustomers.execute({});
+    expect(result.count).toBe(1);
+    expect(result.customers).toHaveLength(1);
+    expect(result.customers[0].firstName).toBe('Mario');
+  });
+
+  it('listCustomers cannot see other tenant customers', async () => {
+    const tools = buildTools({ user: { tenantId: TENANT_B_ID, id: new mongoose.Types.ObjectId().toString(), role: 'owner', businessType: 'cleaning' } });
+    const result = await tools.listCustomers.execute({});
+    expect(result.count).toBe(1);
+    expect(result.customers[0].firstName).toBe('Luigi');
+  });
+
   it('searchJobs cannot see other tenant data', async () => {
     const tools = buildTools({ user: { tenantId: TENANT_A_ID, id: USER_A_ID, role: 'owner', businessType: 'cleaning' } });
     const result = await tools.searchJobs.execute({ limit: 50 });

@@ -1,4 +1,5 @@
 const { searchCustomers } = require("./searchCustomers");
+const { listCustomers } = require("./listCustomers");
 const { searchJobs } = require("./searchJobs");
 const { getInvoiceById } = require("./getInvoiceById");
 const { searchServices } = require("./searchServices");
@@ -9,6 +10,7 @@ const { updateJobStatus } = require("./updateJobStatus");
 const { createInvoice } = require("./createInvoice");
 const { confirmAction } = require("./confirmAction");
 const { getRoleScoping } = require("../../config/roleScoping");
+const { zodSchema } = require("ai");
 
 /**
  * Builds the tools object for the Vercel AI SDK.
@@ -21,9 +23,10 @@ function buildTools(req) {
   const { tenantId, id: userId, role } = req.user;
   const scoping = getRoleScoping(role);
 
-  return {
+  const rawTools = {
     // Read tools (no confirmation needed)
     searchCustomers: searchCustomers(tenantId),
+    listCustomers: listCustomers(tenantId),
     searchJobs: searchJobs(tenantId, scoping, userId),
     getInvoiceById: getInvoiceById(tenantId),
     searchServices: searchServices(tenantId),
@@ -38,6 +41,19 @@ function buildTools(req) {
     // Confirmation tool (executes the pending action)
     confirmAction: confirmAction(tenantId, scoping),
   };
+
+  // ai SDK v6 requires tools to have inputSchema as a wrapped schema object.
+  // Use zodSchema() to convert the Zod schema, then strip $schema URL which
+  // can cause OpenAI function-calling validation errors.
+  return Object.fromEntries(
+    Object.entries(rawTools).map(([name, t]) => {
+      const { parameters, ...rest } = t;
+      const converted = zodSchema(parameters);
+      // Remove $schema field — OpenAI's function calling API does not expect it
+      const { $schema: _unused, ...cleanJsonSchema } = converted.jsonSchema;
+      return [name, { ...rest, inputSchema: { ...converted, jsonSchema: cleanJsonSchema } }];
+    }),
+  );
 }
 
 module.exports = { buildTools };

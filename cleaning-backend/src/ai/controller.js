@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const { createOpenAI } = require("@ai-sdk/openai");
-const { generateText } = require("ai");
+const { generateText, stepCountIs } = require("ai");
 const { z } = require("zod");
 const { buildSystemPrompt } = require("./prompts/system");
 const { buildTools } = require("./tools");
@@ -65,109 +65,42 @@ const chat = async (req, res, next) => {
       session.messages.push(...userMessagesToSave);
     }
 
-    // 3. Reconstruct full history:
-    //    - Start with the saved tool messages from previous turns
-    //    - Then add all assistant responses that match current frontend messages
-    const savedToolCalls = session.messages.filter(
-      (m) => m.role === "assistant" && m.tool_calls,
-    );
-    const savedToolResults = session.messages.filter((m) => m.role === "tool");
-
-    // Build the full message list for the LLM
-    const toolHistory = [];
-    const toolCallMap = {};
-
-    savedToolCalls.forEach((msg) => {
-      toolHistory.push({
-        role: "assistant",
-        content: null,
-        tool_calls: msg.tool_calls,
-      });
-      // Map tool_call_ids to their results
-      msg.tool_calls.forEach((tc) => {
-        toolCallMap[tc.id || tc.toolCallId] = null; // will be filled below
-      });
-    });
-
-    savedToolResults.forEach((msg) => {
-      toolHistory.push({
-        role: "tool",
-        tool_call_id: msg.tool_call_id,
-        content: msg.content,
-      });
-    });
-
-    // Combine: frontend messages interleaved with tool history
-    // We place tool history after the turn where it was generated
-    const fullMessages = [...frontendMessages];
-
-    // Append relevant tool calls from previous turns
-    // Tool messages are appended at the end — the LLM uses them as context
-    const llmMessages = [...frontendMessages, ...toolHistory].slice(-40);
+    // 3. Build message list for the LLM — use only the frontend conversation history.
+    //    generateText with maxSteps handles the tool-call loop internally within
+    //    a single call, so we do not need to replay raw tool_calls/tool messages.
+    const llmMessages = frontendMessages.slice(-40);
 
     // 4. Build tools and prompt
     const tools = buildTools(req);
     const systemPrompt = buildSystemPrompt(req.user, tools);
 
     // 5. Call LLM and capture intermediate steps
-    const stepMessages = [];
-
     const { text } = await generateText({
       model: getModel(),
       system: systemPrompt,
       messages: llmMessages,
       tools,
-      maxSteps: 12,
-      onStepFinish: (step) => {
-        // Save tool calls and results from this step
-        if (step.toolCalls && step.toolCalls.length > 0) {
-          stepMessages.push({
-            role: "assistant",
-            content: null,
-            tool_calls: step.toolCalls.map((tc) => ({
-              id: tc.toolCallId,
-              type: "function",
-              function: {
-                name: tc.toolName,
-                arguments: JSON.stringify(tc.args),
-              },
-            })),
-          });
-
-          step.toolResults.forEach((tr) => {
-            stepMessages.push({
-              role: "tool",
-              tool_call_id: tr.toolCallId,
-              content: typeof tr.result === "string"
-                ? tr.result
-                : JSON.stringify(tr.result),
-            });
-          });
-        }
-      },
+      stopWhen: stepCountIs(12),
     });
 
-    // 6. Save assistant response and intermediate tool messages to session
+    // 6. Save assistant response to session
     session.messages.push({
       role: "assistant",
       content: text,
       timestamp: new Date(),
     });
 
-    stepMessages.forEach((msg) => {
-      session.messages.push({ ...msg, timestamp: new Date() });
-    });
-
     // Trim session history to last 100 messages to prevent unbounded growth
     if (session.messages.length > 100) {
-      const toolOnlyMessages = session.messages.filter(
-        (m) => m.role === "assistant" || m.role === "tool",
-      );
       const lastUserMessages = session.messages
         .filter((m) => m.role === "user")
-        .slice(-30);
-
-      session.messages = [...lastUserMessages, ...toolOnlyMessages.slice(-70)];
+        .slice(-50);
+      const lastAssistantMessages = session.messages
+        .filter((m) => m.role === "assistant")
+        .slice(-50);
+      session.messages = [...lastUserMessages, ...lastAssistantMessages].sort(
+        (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
+      );
     }
 
     await session.save();
