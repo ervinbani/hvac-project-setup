@@ -2,7 +2,7 @@ const { z } = require("zod");
 const jwt = require("jsonwebtoken");
 const Customer = require("../../models/Customer");
 
-function createInvoice(tenantId, userId) {
+function createInvoice(tenantId, userId, scoping = { canWrite: true }) {
   return {
     description:
       "Create a new invoice for a customer with line items. " +
@@ -31,6 +31,10 @@ function createInvoice(tenantId, userId) {
       notes: z.string().optional().describe("Any notes to appear on the invoice"),
     }),
     execute: async (args) => {
+      if (!scoping.canWrite) {
+        return { error: "Your role does not have permission to create invoices." };
+      }
+
       // Business validation before creating token
       const customer = await Customer.findOne({ _id: args.customerId, tenantId }).lean();
       if (!customer) {

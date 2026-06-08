@@ -1,7 +1,7 @@
 const { z } = require("zod");
 const jwt = require("jsonwebtoken");
 
-function createCustomer(tenantId) {
+function createCustomer(tenantId, scoping = { canWrite: true }) {
   return {
     description:
       "Create a new customer record. " +
@@ -18,6 +18,10 @@ function createCustomer(tenantId) {
       notes: z.string().optional().describe("Any notes about the customer"),
     }),
     execute: async (args) => {
+      if (!scoping.canWrite) {
+        return { error: "Your role does not have permission to create customers." };
+      }
+
       const confirmationCode = jwt.sign(
         {
           action: "createCustomer",

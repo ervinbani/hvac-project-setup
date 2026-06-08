@@ -1,7 +1,7 @@
 const { z } = require("zod");
 const Job = require("../../models/Job");
 
-function searchJobs(tenantId) {
+function searchJobs(tenantId, scoping = { assignedOnly: false }, userId = null) {
   return {
     description:
       "Search for jobs with optional filters. " +
@@ -40,6 +40,10 @@ function searchJobs(tenantId) {
     }),
     execute: async ({ status, customerId, dateFrom, dateTo, limit }) => {
       const filter = { tenantId };
+
+      if (scoping.assignedOnly && userId) {
+        filter.assignedUsers = userId;
+      }
 
       if (status) filter.status = status;
       if (customerId) filter.customerId = customerId;

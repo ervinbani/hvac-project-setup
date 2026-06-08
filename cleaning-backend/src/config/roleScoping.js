@@ -4,36 +4,42 @@ const ROLE_SCOPING = {
     seeCosts: true,
     manageTeam: true,
     assignedOnly: false,
+    canWrite: true,
   },
   director: {
     seeRevenue: true,
     seeCosts: true,
     manageTeam: true,
     assignedOnly: false,
+    canWrite: true,
   },
   manager_operations: {
     seeRevenue: false,
     seeCosts: true,
     manageTeam: false,
     assignedOnly: false,
+    canWrite: true,
   },
   manager_hr: {
     seeRevenue: false,
     seeCosts: false,
     manageTeam: true,
     assignedOnly: false,
+    canWrite: true,
   },
   staff: {
     seeRevenue: false,
     seeCosts: false,
     manageTeam: false,
     assignedOnly: false,
+    canWrite: false,
   },
   worker: {
     seeRevenue: false,
     seeCosts: false,
     manageTeam: false,
     assignedOnly: true,
+    canWrite: false,
   },
 };
 

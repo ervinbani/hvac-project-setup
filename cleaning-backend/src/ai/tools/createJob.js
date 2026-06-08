@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const Customer = require("../../models/Customer");
 const Service = require("../../models/Service");
 
-function createJob(tenantId, userId) {
+function createJob(tenantId, userId, scoping = { canWrite: true }) {
   return {
     description:
       "Create a new job for an existing customer. " +
@@ -19,6 +19,10 @@ function createJob(tenantId, userId) {
       notes: z.string().optional().describe("Any special instructions or notes for the job"),
     }),
     execute: async (args) => {
+      if (!scoping.canWrite) {
+        return { error: "Your role does not have permission to create jobs." };
+      }
+
       // Business validation still happens NOW — catch issues before creating token
       const customer = await Customer.findOne({ _id: args.customerId, tenantId }).lean();
       if (!customer) {

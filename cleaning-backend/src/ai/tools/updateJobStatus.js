@@ -2,7 +2,7 @@ const { z } = require("zod");
 const jwt = require("jsonwebtoken");
 const Job = require("../../models/Job");
 
-function updateJobStatus(tenantId) {
+function updateJobStatus(tenantId, scoping = { canWrite: true }) {
   return {
     description:
       "Update the status of an existing job. " +
@@ -27,6 +27,10 @@ function updateJobStatus(tenantId) {
         .describe("Reason for the status change (e.g. why canceled)"),
     }),
     execute: async (args) => {
+      if (!scoping.canWrite) {
+        return { error: "Your role does not have permission to update job status." };
+      }
+
       // Validate the job exists before creating token
       const job = await Job.findOne({ _id: args.jobId, tenantId })
         .select("title status")

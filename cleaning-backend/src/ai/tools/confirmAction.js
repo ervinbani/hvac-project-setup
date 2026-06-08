@@ -9,7 +9,7 @@ const ACTION_HANDLERS = {
   createInvoice: require("../../models/Invoice"),
 };
 
-function confirmAction(tenantId) {
+function confirmAction(tenantId, scoping = { canWrite: true }) {
   return {
     description:
       "Confirm a pending action using the confirmation code provided earlier. " +
@@ -22,6 +22,10 @@ function confirmAction(tenantId) {
         .describe("The confirmation code (JWT token) returned by a previous write tool"),
     }),
     execute: async ({ confirmationCode }) => {
+      if (!scoping.canWrite) {
+        return { error: "Your role does not have permission to confirm actions." };
+      }
+
       let decoded;
       try {
         decoded = jwt.verify(confirmationCode, process.env.JWT_SECRET);

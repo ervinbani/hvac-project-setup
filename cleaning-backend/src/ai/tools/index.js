@@ -8,6 +8,7 @@ const { createJob } = require("./createJob");
 const { updateJobStatus } = require("./updateJobStatus");
 const { createInvoice } = require("./createInvoice");
 const { confirmAction } = require("./confirmAction");
+const { getRoleScoping } = require("../../config/roleScoping");
 
 /**
  * Builds the tools object for the Vercel AI SDK.
@@ -18,23 +19,24 @@ const { confirmAction } = require("./confirmAction");
  */
 function buildTools(req) {
   const { tenantId, id: userId, role } = req.user;
+  const scoping = getRoleScoping(role);
 
   return {
     // Read tools (no confirmation needed)
     searchCustomers: searchCustomers(tenantId),
-    searchJobs: searchJobs(tenantId),
+    searchJobs: searchJobs(tenantId, scoping, userId),
     getInvoiceById: getInvoiceById(tenantId),
     searchServices: searchServices(tenantId),
     listUsers: listUsers(tenantId),
 
     // Write tools (return pending + JWT, need confirmAction to execute)
-    createCustomer: createCustomer(tenantId),
-    createJob: createJob(tenantId, userId),
-    updateJobStatus: updateJobStatus(tenantId),
-    createInvoice: createInvoice(tenantId, userId),
+    createCustomer: createCustomer(tenantId, scoping),
+    createJob: createJob(tenantId, userId, scoping),
+    updateJobStatus: updateJobStatus(tenantId, scoping),
+    createInvoice: createInvoice(tenantId, userId, scoping),
 
     // Confirmation tool (executes the pending action)
-    confirmAction: confirmAction(tenantId),
+    confirmAction: confirmAction(tenantId, scoping),
   };
 }
 
