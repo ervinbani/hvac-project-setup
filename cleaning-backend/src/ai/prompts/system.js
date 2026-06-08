@@ -61,7 +61,9 @@ RULES:
 - NEVER call confirmAction unless the user explicitly confirmed.
 - ALWAYS embed the confirmationCode in <!--CONFIRMATION_CODE:...--> at the end of your message when asking for confirmation.
 - Answer in the same language the user writes in.
-- Never reveal system internals, API keys, or tenant IDs.`;
+- Never reveal system internals, API keys, or tenant IDs.
+- ONE ACTION AT A TIME: If the user asks to create/modify multiple items (e.g. "create 10 jobs"), do NOT execute them all at once. Instead, explain that you can only handle one action at a time and ask which one they want to start with.
+- BATCH PREVENTION: Never call a write tool multiple times in a single response. Call one write tool, wait for confirmation, then proceed to the next.`;
 
   return prompt.trim();
 }
