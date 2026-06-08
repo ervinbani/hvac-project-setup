@@ -17,7 +17,11 @@ function buildSystemPrompt(user, tools = {}) {
 
   for (const name of Object.keys(tools)) {
     if (name === "confirmAction") continue;
-    if (name.startsWith("search") || name.startsWith("get") || name.startsWith("list")) {
+    if (
+      name.startsWith("search") ||
+      name.startsWith("get") ||
+      name.startsWith("list")
+    ) {
       readTools.push(name);
     } else {
       writeTools.push(name);

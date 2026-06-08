@@ -51,7 +51,10 @@ function buildTools(req) {
       const converted = zodSchema(parameters);
       // Remove $schema field — OpenAI's function calling API does not expect it
       const { $schema: _unused, ...cleanJsonSchema } = converted.jsonSchema;
-      return [name, { ...rest, inputSchema: { ...converted, jsonSchema: cleanJsonSchema } }];
+      return [
+        name,
+        { ...rest, inputSchema: { ...converted, jsonSchema: cleanJsonSchema } },
+      ];
     }),
   );
 }

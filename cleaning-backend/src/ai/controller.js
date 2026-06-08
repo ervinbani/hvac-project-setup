@@ -35,7 +35,8 @@ const chat = async (req, res, next) => {
       });
     }
 
-    const { messages: frontendMessages, sessionId: existingSessionId } = result.data;
+    const { messages: frontendMessages, sessionId: existingSessionId } =
+      result.data;
     const { tenantId, id: userId, role, businessType } = req.user;
 
     // 1. Load or create session

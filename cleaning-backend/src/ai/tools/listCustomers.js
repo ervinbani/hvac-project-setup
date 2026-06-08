@@ -29,7 +29,7 @@ function listCustomers(tenantId) {
 
         return { count: results.length, customers: results };
       } catch (err) {
-        console.error('[listCustomers] execute error:', err.message);
+        console.error("[listCustomers] execute error:", err.message);
         return { error: err.message };
       }
     },
