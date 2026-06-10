@@ -7,20 +7,13 @@ function listCustomers(tenantId) {
       "List all customers for the current account. " +
       "Use this when the user asks 'how many customers do I have?', " +
       "'show me all customers', or wants a general overview. " +
-      "For finding a specific customer by name/email/phone, use searchCustomers instead.",
-    parameters: z.object({
-      limit: z
-        .number()
-        .min(1)
-        .max(100)
-        .default(50)
-        .describe("Maximum number of customers to return"),
-    }),
-    execute: async ({ limit }) => {
+      "For finding a specific customer by name/phone/email, use searchCustomers instead.",
+    parameters: z.object({}),
+    execute: async () => {
       try {
         const results = await Customer.find({ tenantId })
           .select("firstName lastName email phone address city")
-          .limit(limit ?? 50)
+          .limit(200)
           .lean();
 
         if (results.length === 0) {
